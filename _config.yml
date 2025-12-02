@@ -1,0 +1,19 @@
+# GitHub Pages Configuration
+baseurl: "/lizard_game"  # the subpath of your site, e.g. /blog
+url: "https://stevebuscemi1.github.io"  # the base hostname & protocol for your site
+
+# Security Headers
+defaults:
+  - scope:
+      path: ""
+      type: "html"
+    values:
+      content_security_policy: |
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https:;
+        style-src 'self' 'unsafe-inline' https:;
+        img-src 'self' data: blob: https:;
+        media-src 'self' data: blob: https:;
+        font-src 'self' data: https:;
+        connect-src 'self' https:;
+        frame-src 'self' https:;
