@@ -1,0 +1,3916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Lizard Leaf Eater - Enhanced Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Only hide cursor when game is active and lizard is moving */
+        body.game-active.playing {
+            cursor: none;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            position: relative;
+            height: 100vh;
+            transition: background 3s ease;
+            touch-action: none;
+        }
+
+        /* Day/Night Cycle Backgrounds */
+        body.day {
+            background: linear-gradient(to bottom, #87CEEB 0%, #98D98E 50%, #2d8659 100%);
+        }
+
+        body.evening {
+            background: linear-gradient(to bottom, #FF7E5F 0%, #FEB47B 50%, #2d8659 100%);
+        }
+
+        body.night {
+            background: linear-gradient(to bottom, #0F2027 0%, #203A43 50%, #2d8659 100%);
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-lizard {
+            width: 100px;
+            height: 100px;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 24px;
+            margin-top: 20px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Asset Loading Progress */
+        .loading-progress {
+            width: 80%;
+            height: 10px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .loading-progress-bar {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .loading-percentage {
+            color: white;
+            margin-top: 10px;
+            font-size: 16px;
+        }
+
+        /* Character Customization Screen */
+        .customization-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: all 0.5s ease;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .customization-screen.hidden {
+            transform: translateY(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .customization-title {
+            font-size: clamp(28px, 6vw, 36px);
+            color: white;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .customization-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(5px);
+        }
+
+        .lizard-preview {
+            width: 150px;
+            height: 150px;
+            margin-bottom: 20px;
+        }
+
+        .customization-section {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .customization-label {
+            color: white;
+            font-size: clamp(16px, 4vw, 20px);
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .customization-options {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .customization-option {
+            width: clamp(50px, 12vw, 70px);
+            height: clamp(50px, 12vw, 70px);
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: clamp(24px, 6vw, 32px);
+        }
+
+        .customization-option:hover {
+            transform: scale(1.1);
+        }
+
+        .customization-option.selected {
+            border-color: white;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .color-option {
+            background-color: var(--color);
+        }
+
+        .pattern-option {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .accessory-option {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .customization-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .customization-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: clamp(16px, 4vw, 20px);
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            cursor: pointer;
+        }
+
+        .customization-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .customization-btn:active {
+            transform: scale(0.95);
+        }
+
+        .randomize-btn {
+            background: linear-gradient(45deg, #FF9800, #F57C00);
+        }
+
+        /* Start Screen */
+        .start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9998;
+            transition: all 0.5s ease;
+        }
+
+        .start-screen.hidden {
+            transform: translateY(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .game-title {
+            font-size: clamp(32px, 8vw, 48px);
+            color: white;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: float 3s ease-in-out infinite;
+            text-align: center;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            z-index: 10; /* Ensure buttons are on top */
+        }
+
+        .menu-btn {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: clamp(18px, 5vw, 24px);
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            cursor: pointer;
+            min-width: 200px;
+        }
+
+        .menu-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .menu-btn:active {
+            transform: scale(0.95);
+        }
+
+        .gallery-btn {
+            background: linear-gradient(45deg, #9C27B0, #673AB7);
+        }
+
+        /* Cutscene Screen */
+        .cutscene-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1E88E5, #1565C0);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9997;
+            transition: all 0.5s ease;
+            padding: 20px;
+        }
+
+        .cutscene-screen.hidden {
+            transform: translateY(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .cutscene-container {
+            width: 100%;
+            max-width: 800px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(5px);
+        }
+
+        .cutscene-title {
+            font-size: clamp(24px, 6vw, 32px);
+            color: white;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .cutscene-animation {
+            height: 200px;
+            position: relative;
+            margin-bottom: 20px;
+            overflow: hidden;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .cutscene-character {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            bottom: 20px;
+            left: 50px;
+            animation: walk-cutscene 5s linear infinite;
+        }
+
+        @keyframes walk-cutscene {
+            0% { left: -100px; }
+            100% { left: calc(100% + 100px); }
+        }
+
+        .cutscene-text {
+            color: white;
+            font-size: clamp(16px, 4vw, 20px);
+            text-align: center;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .cutscene-skip {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: clamp(16px, 4vw, 18px);
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .cutscene-skip:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Gallery Screen */
+        .gallery-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #9C27B0, #673AB7);
+            display: flex;
+            flex-direction: column;
+            z-index: 9996;
+            transition: all 0.3s ease;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .gallery-screen.hidden {
+            transform: translateY(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .gallery-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .gallery-title {
+            font-size: clamp(28px, 6vw, 36px);
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .close-gallery {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .close-gallery:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .reset-collection {
+            background: rgba(255, 67, 54, 0.8);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .reset-collection:hover {
+            background: rgba(255, 67, 54, 1);
+            transform: scale(1.05);
+        }
+
+        .gallery-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .gallery-tab {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: clamp(16px, 4vw, 18px);
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .gallery-tab.active {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .gallery-content {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(5px);
+            flex-grow: 1;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px;
+        }
+
+        .gallery-item {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .gallery-item:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .gallery-item.locked {
+            background: rgba(0, 0, 0, 0.3);
+            opacity: 0.7;
+        }
+
+        .gallery-item-icon {
+            font-size: clamp(32px, 8vw, 48px);
+            margin-bottom: 10px;
+        }
+
+        .gallery-item-name {
+            color: white;
+            font-size: clamp(12px, 3vw, 14px);
+            text-align: center;
+        }
+
+        .gallery-item-count {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .progress-text {
+            color: white;
+            text-align: center;
+            margin-top: 10px;
+            font-size: clamp(14px, 3.5vw, 16px);
+        }
+
+        /* Background Animations */
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 100px;
+            opacity: 0.7;
+            animation: float-cloud 20s infinite linear;
+            z-index: 1;
+        }
+
+        .cloud::before {
+            content: '';
+            position: absolute;
+            background: white;
+            border-radius: 100px;
+        }
+
+        .cloud1 {
+            width: 100px;
+            height: 40px;
+            top: 20%;
+            left: -100px;
+        }
+
+        .cloud1::before {
+            width: 50px;
+            height: 50px;
+            top: -25px;
+            left: 10px;
+        }
+
+        .cloud2 {
+            width: 80px;
+            height: 35px;
+            top: 40%;
+            left: -80px;
+            animation-duration: 25s;
+        }
+
+        .cloud2::before {
+            width: 60px;
+            height: 40px;
+            top: -20px;
+            right: 15px;
+        }
+
+        @keyframes float-cloud {
+            from { transform: translateX(0); }
+            to { transform: translateX(calc(100vw + 100px)); }
+        }
+
+        .grass {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 100px;
+            background: linear-gradient(to top, #2d5016 0%, transparent 100%);
+            z-index: 1;
+        }
+
+        .grass-blade {
+            position: absolute;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(to top, #2d5016, #4a7c2e);
+            transform-origin: bottom;
+            animation: sway 3s ease-in-out infinite;
+        }
+
+        @keyframes sway {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(3deg); }
+        }
+
+        /* Lizard Character - Background Animation */
+        .lizard-character {
+            position: absolute;
+            width: clamp(60px, 15vw, 80px);
+            height: clamp(70px, 17.5vw, 100px);
+            z-index: 50;
+            pointer-events: none;
+            opacity: 0.8;
+            transition: transform 0.3s ease;
+        }
+
+        .lizard-character svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.5));
+        }
+
+        /* Lizard animation states */
+        .lizard-character.idle {
+            animation: lizard-idle 4s infinite ease-in-out;
+        }
+
+        @keyframes lizard-idle {
+            0%, 100% { transform: translateY(0) scale(1); }
+            25% { transform: translateY(-5px) scale(1.02); }
+            50% { transform: translateY(0) scale(1); }
+            75% { transform: translateY(-3px) scale(1.01); }
+        }
+
+        .lizard-character.walking {
+            animation: lizard-walk 0.5s infinite;
+        }
+
+        @keyframes lizard-walk {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+        }
+
+        .lizard-character.eating {
+            animation: eat-animation 0.3s ease-in-out;
+        }
+
+        @keyframes eat-animation {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        /* Header with controls */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.3);
+            color: white;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .counter {
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: clamp(14px, 4vw, 18px);
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .leaf-icon {
+            font-size: clamp(18px, 5vw, 24px);
+        }
+
+        .score {
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: clamp(14px, 4vw, 18px);
+            font-weight: bold;
+        }
+
+        .combo {
+            background-color: rgba(255, 165, 0, 0.7);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: clamp(14px, 4vw, 18px);
+            font-weight: bold;
+            display: none;
+            animation: pulse 0.5s infinite;
+        }
+
+        .combo.active {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .audio-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .audio-btn {
+            background-color: rgba(0, 0, 0, 0.5);
+            border: none;
+            color: white;
+            padding: 8px;
+            border-radius: 50%;
+            width: clamp(32px, 8vw, 40px);
+            height: clamp(32px, 8vw, 40px);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: clamp(16px, 4vw, 20px);
+            touch-action: manipulation;
+        }
+
+        .audio-btn:hover {
+            background-color: rgba(0, 0, 0, 0.7);
+            transform: scale(1.1);
+        }
+
+        .audio-btn:active {
+            transform: scale(0.95);
+        }
+
+        .volume-slider {
+            width: clamp(60px, 15vw, 100px);
+            height: 5px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        /* In-game buttons */
+        .in-game-buttons {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 101;
+        }
+
+        .in-game-btn {
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 30px;
+            font-size: clamp(14px, 4vw, 16px);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .in-game-btn:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+            transform: scale(1.05);
+        }
+
+        .in-game-btn:active {
+            transform: scale(0.95);
+        }
+
+        .restart-btn {
+            background-color: rgba(244, 67, 54, 0.8);
+        }
+
+        .restart-btn:hover {
+            background-color: rgba(244, 67, 54, 0.9);
+        }
+
+        .gallery-game-btn {
+            background-color: rgba(156, 39, 176, 0.8);
+        }
+
+        .gallery-game-btn:hover {
+            background-color: rgba(156, 39, 176, 0.9);
+        }
+
+        /* Game container for random hex positioning */
+        .game-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            z-index: 2;
+        }
+
+        /* Hexagonal cell */
+        .hex {
+            position: absolute;
+            width: clamp(70px, 15vw, 100px);
+            height: clamp(77px, 16.5vw, 110px);
+            transition: all 0.3s ease;
+            z-index: 10;
+            cursor: pointer;
+        }
+
+        .hex-inner {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform: rotate(30deg);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .hex-inner:before,
+        .hex-inner:after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 20px;
+            background: inherit;
+        }
+
+        .hex-inner:before {
+            transform: rotate(60deg);
+        }
+
+        .hex-inner:after {
+            transform: rotate(-60deg);
+        }
+
+        .hex:hover .hex-inner {
+            transform: rotate(30deg) scale(1.05);
+        }
+
+        /* Different leaf types with shapes and colors */
+        .leaf {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(28px, 7vw, 40px);
+            z-index: 15;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .leaf.normal {
+            filter: hue-rotate(0deg);
+        }
+
+        .leaf.golden {
+            filter: hue-rotate(45deg) brightness(1.5);
+            animation: sparkle 2s infinite;
+        }
+
+        .leaf.rare {
+            filter: hue-rotate(270deg) brightness(1.2);
+            animation: glow 1.5s infinite;
+        }
+
+        .leaf.autumn {
+            filter: hue-rotate(20deg) saturate(1.5);
+        }
+
+        .leaf.tropical {
+            filter: hue-rotate(120deg) saturate(1.3);
+        }
+
+        .leaf.forest {
+            filter: hue-rotate(90deg) brightness(0.8);
+        }
+
+        /* Boss leaf */
+        .leaf.boss {
+            font-size: clamp(40px, 10vw, 60px);
+            filter: hue-rotate(180deg) brightness(1.2) saturate(1.5);
+            animation: boss-glow 1s infinite;
+        }
+
+        @keyframes boss-glow {
+            0%, 100% { 
+                filter: hue-rotate(180deg) brightness(1.2) saturate(1.5) drop-shadow(0 0 10px red);
+                transform: translate(-50%, -50%) scale(1);
+            }
+            50% { 
+                filter: hue-rotate(180deg) brightness(1.5) saturate(2) drop-shadow(0 0 20px red);
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+        }
+
+        @keyframes sparkle {
+            0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+            50% { transform: translate(-50%, -50%) scale(1.1) rotate(10deg); }
+        }
+
+        @keyframes glow {
+            0%, 100% { filter: hue-rotate(270deg) brightness(1.2) drop-shadow(0 0 5px gold); }
+            50% { filter: hue-rotate(270deg) brightness(1.5) drop-shadow(0 0 10px gold); }
+        }
+
+        .hex.eaten .leaf {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(1.5) rotate(360deg);
+        }
+
+        .hex.eaten {
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        /* Power-ups */
+        .power-up {
+            position: absolute;
+            width: clamp(50px, 12vw, 70px);
+            height: clamp(50px, 12vw, 70px);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: clamp(24px, 6vw, 32px);
+            z-index: 20;
+            animation: power-up-pulse 2s infinite;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        @keyframes power-up-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .power-up.speed {
+            background: linear-gradient(135deg, #FF9800, #FF5722);
+            box-shadow: 0 0 15px rgba(255, 152, 0, 0.7);
+        }
+
+        .power-up.points {
+            background: linear-gradient(135deg, #FFEB3B, #FFC107);
+            box-shadow: 0 0 15px rgba(255, 235, 59, 0.7);
+        }
+
+        .power-up.magnet {
+            background: linear-gradient(135deg, #9C27B0, #673AB7);
+            box-shadow: 0 0 15px rgba(156, 39, 176, 0.7);
+        }
+
+        /* Obstacles - only rocks now */
+        .obstacle {
+            position: absolute;
+            z-index: 5;
+            transition: all 0.3s ease;
+        }
+
+        .obstacle.rock {
+            width: clamp(60px, 15vw, 80px);
+            height: clamp(40px, 10vw, 60px);
+            background: linear-gradient(135deg, #757575, #424242);
+            border-radius: 40%;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Particle effects */
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            animation: particle-float 1s ease-out forwards;
+            z-index: 1000;
+        }
+
+        @keyframes particle-float {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--x), var(--y)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        /* Modal for game completion */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            max-width: 400px;
+            width: 100%;
+            animation: modal-appear 0.5s ease;
+        }
+
+        @keyframes modal-appear {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal-content h2 {
+            margin-bottom: 20px;
+            font-size: clamp(24px, 6vw, 28px);
+        }
+
+        .modal-content p {
+            margin-bottom: 25px;
+            font-size: clamp(16px, 4vw, 18px);
+        }
+
+        .play-again-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: clamp(16px, 4vw, 18px);
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            touch-action: manipulation;
+        }
+
+        .play-again-btn:hover {
+            background-color: #45a049;
+        }
+
+        /* Mini-game modal */
+        .mini-game {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .mini-game-content {
+            background: linear-gradient(135deg, #1E88E5, #1565C0);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            max-width: 500px;
+            width: 100%;
+            animation: modal-appear 0.5s ease;
+        }
+
+        .mini-game-title {
+            font-size: clamp(24px, 6vw, 32px);
+            margin-bottom: 20px;
+        }
+
+        .mini-game-area {
+            height: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mini-target {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, #FFEB3B, #FFC107);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 235, 59, 0.7);
+            animation: target-pulse 1s infinite;
+        }
+
+        @keyframes target-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .mini-timer {
+            font-size: clamp(18px, 5vw, 24px);
+            margin-bottom: 15px;
+        }
+
+        .mini-score {
+            font-size: clamp(18px, 5vw, 24px);
+            margin-bottom: 15px;
+        }
+
+        .skip-btn {
+            background-color: #F44336;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: clamp(16px, 4vw, 18px);
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            touch-action: manipulation;
+        }
+
+        .skip-btn:hover {
+            background-color: #D32F2F;
+        }
+
+        /* Achievement notification */
+        .achievement {
+            position: fixed;
+            top: 100px;
+            right: -400px;
+            width: 350px;
+            background: linear-gradient(135deg, #FFD700, #FFA000);
+            color: #333;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            z-index: 3000;
+            transition: right 0.5s ease;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .achievement.show {
+            right: 20px;
+        }
+
+        .achievement-icon {
+            font-size: 32px;
+        }
+
+        .achievement-text h3 {
+            margin: 0 0 5px 0;
+            font-size: 18px;
+        }
+
+        .achievement-text p {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .achievement-rare {
+            background: linear-gradient(135deg, #9C27B0, #673AB7);
+            color: white;
+        }
+
+        .achievement-hidden {
+            background: linear-gradient(135deg, #424242, #212121);
+            color: white;
+        }
+
+        /* Sound indicator */
+        .sound-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            display: none;
+            font-size: 14px;
+        }
+
+        /* Mobile hint for touch control */
+        .mobile-hint {
+            position: fixed;
+            bottom: 60px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: clamp(12px, 3vw, 14px);
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 8px;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+
+        .mobile-hint.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            header {
+                padding: 8px;
+                flex-direction: column;
+                align-items: center;
+                gap: 5px;
+            }
+            
+            .audio-controls {
+                order: 3;
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .achievement {
+                width: 90%;
+                right: -100%;
+            }
+            
+            .achievement.show {
+                right: 5%;
+            }
+            
+            .gallery-grid {
+                grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            }
+            
+            .in-game-buttons {
+                bottom: 10px;
+                right: 10px;
+            }
+            
+            .in-game-btn {
+                padding: 8px 12px;
+                font-size: clamp(12px, 3.5vw, 14px);
+                min-width: 80px;
+            }
+            
+            .lizard-character {
+                width: 60px;
+                height: 70px;
+            }
+        }
+
+        /* Game elements positioning */
+        .hex {
+            position: absolute;
+            width: 100px;
+            height: 110px;
+            z-index: 10;
+            cursor: pointer;
+        }
+
+        .power-up {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            z-index: 20;
+        }
+    </style>
+</head>
+<body class="day">
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-lizard">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <path d="M50,10 C60,10 70,20 70,30 C70,40 65,45 65,50 C65,55 70,60 70,70 C70,80 60,90 50,90 C40,90 30,80 30,70 C30,60 35,55 35,50 C35,45 30,40 30,30 C30,20 40,10 50,10 Z" fill="#8A2BE2" stroke="#4B0082" stroke-width="2"/>
+                <circle cx="40" cy="30" r="5" fill="white"/>
+                <circle cx="60" cy="30" r="5" fill="white"/>
+                <circle cx="40" cy="30" r="3" fill="black"/>
+                <circle cx="60" cy="30" r="3" fill="black"/>
+                <path d="M45,40 Q50,45 55,40" stroke="#4B0082" stroke-width="2" fill="none"/>
+            </svg>
+        </div>
+        <div class="loading-text">Loading...</div>
+        <div class="loading-progress">
+            <div class="loading-progress-bar" id="loadingProgressBar"></div>
+        </div>
+        <div class="loading-percentage" id="loadingPercentage">0%</div>
+    </div>
+
+    <!-- Character Customization Screen -->
+    <div class="customization-screen hidden" id="customizationScreen">
+        <h2 class="customization-title">Customize Your Lizard</h2>
+        <div class="customization-container">
+            <div class="lizard-preview">
+                <svg id="lizardPreview" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Lizard body -->
+                    <path id="lizardBody" d="M50,10 C60,10 70,20 70,30 C70,40 65,45 65,50 C65,55 70,60 70,70 C70,80 60,90 50,90 C40,90 30,80 30,70 C30,60 35,55 35,50 C35,45 30,40 30,30 C30,20 40,10 50,10 Z" fill="#8A2BE2" stroke="#4B0082" stroke-width="2"/>
+                    
+                    <!-- Eyes -->
+                    <circle cx="40" cy="30" r="5" fill="white"/>
+                    <circle cx="60" cy="30" r="5" fill="white"/>
+                    <circle cx="40" cy="30" r="3" fill="black"/>
+                    <circle cx="60" cy="30" r="3" fill="black"/>
+                    
+                    <!-- Mouth -->
+                    <path d="M45,40 Q50,45 55,40" stroke="#4B0082" stroke-width="2" fill="none"/>
+                    
+                    <!-- Front legs -->
+                    <path d="M30,25 C20,20 10,25 10,35" stroke="#8A2BE2" stroke-width="3" fill="none"/>
+                    <path d="M70,25 C80,20 90,25 90,35" stroke="#8A2BE2" stroke-width="3" fill="none"/>
+                    
+                    <!-- Back legs -->
+                    <path d="M30,65 C20,60 10,65 10,75" stroke="#8A2BE2" stroke-width="3" fill="none"/>
+                    <path d="M70,65 C80,60 90,65 90,75" stroke="#8A2BE2" stroke-width="3" fill="none"/>
+                    
+                    <!-- Leg details -->
+                    <circle cx="10" cy="35" r="2" fill="#8A2BE2"/>
+                    <circle cx="90" cy="35" r="2" fill="#8A2BE2"/>
+                    <circle cx="10" cy="75" r="2" fill="#8A2BE2"/>
+                    <circle cx="90" cy="75" r="2" fill="#8A2BE2"/>
+                    
+                    <!-- Tail -->
+                    <path id="lizardTail" d="M50,90 Q40,95 30,85 Q20,75 10,65" stroke="#8A2BE2" stroke-width="3" fill="none"/>
+                    
+                    <!-- Pattern (initially hidden) -->
+                    <g id="lizardPattern" style="display: none;">
+                        <!-- Pattern will be added dynamically -->
+                    </g>
+                    
+                    <!-- Accessory (initially hidden) -->
+                    <g id="lizardAccessory" style="display: none;">
+                        <!-- Accessory will be added dynamically -->
+                    </g>
+                </svg>
+            </div>
+            
+            <div class="customization-section">
+                <h3 class="customization-label">Body Color</h3>
+                <div class="customization-options" id="colorOptions">
+                    <div class="customization-option color-option selected" data-color="#8A2BE2" style="--color: #8A2BE2;"></div>
+                    <div class="customization-option color-option" data-color="#4CAF50" style="--color: #4CAF50;"></div>
+                    <div class="customization-option color-option" data-color="#FF5722" style="--color: #FF5722;"></div>
+                    <div class="customization-option color-option" data-color="#2196F3" style="--color: #2196F3;"></div>
+                    <div class="customization-option color-option" data-color="#FFEB3B" style="--color: #FFEB3B;"></div>
+                    <div class="customization-option color-option" data-color="#9C27B0" style="--color: #9C27B0;"></div>
+                </div>
+            </div>
+            
+            <div class="customization-section">
+                <h3 class="customization-label">Pattern</h3>
+                <div class="customization-options" id="patternOptions">
+                    <div class="customization-option pattern-option selected" data-pattern="none">None</div>
+                    <div class="customization-option pattern-option" data-pattern="spots">🔵</div>
+                    <div class="customization-option pattern-option" data-pattern="stripes">🟦</div>
+                    <div class="customization-option pattern-option" data-pattern="zigzag">🔷</div>
+                </div>
+            </div>
+            
+            <div class="customization-section">
+                <h3 class="customization-label">Accessory</h3>
+                <div class="customization-options" id="accessoryOptions">
+                    <div class="customization-option accessory-option selected" data-accessory="none">None</div>
+                    <div class="customization-option accessory-option" data-accessory="hat">🎩</div>
+                    <div class="customization-option accessory-option" data-accessory="bow">🎀</div>
+                    <div class="customization-option accessory-option" data-accessory="sunglasses">🕶️</div>
+                </div>
+            </div>
+            
+            <div class="customization-buttons">
+                <button class="customization-btn randomize-btn" id="randomizeBtn">Randomize</button>
+                <button class="customization-btn" id="startGameBtn">Start Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Screen -->
+    <div class="start-screen hidden" id="startScreen">
+        <h1 class="game-title">🦎 Lizard Leaf Eater 🍃</h1>
+        <div class="menu-buttons">
+            <button class="menu-btn" id="newGameBtn">New Game</button>
+            <button class="menu-btn gallery-btn" id="galleryBtn">Gallery</button>
+        </div>
+    </div>
+
+    <!-- Cutscene Screen -->
+    <div class="cutscene-screen hidden" id="cutsceneScreen">
+        <div class="cutscene-container">
+            <h2 class="cutscene-title" id="cutsceneTitle">Chapter 1: The Beginning</h2>
+            <div class="cutscene-animation">
+                <div class="cutscene-character" id="cutsceneCharacter">
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Lizard body will be customized based on player choices -->
+                        <path id="cutsceneLizardBody" d="M50,10 C60,10 70,20 70,30 C70,40 65,45 65,50 C65,55 70,60 70,70 C70,80 60,90 50,90 C40,90 30,80 30,70 C30,60 35,55 35,50 C35,45 30,40 30,30 C30,20 40,10 50,10 Z" fill="#8A2BE2" stroke="#4B0082" stroke-width="2"/>
+                        <circle cx="40" cy="30" r="5" fill="white"/>
+                        <circle cx="60" cy="30" r="5" fill="white"/>
+                        <circle cx="40" cy="30" r="3" fill="black"/>
+                        <circle cx="60" cy="30" r="3" fill="black"/>
+                        <path d="M45,40 Q50,45 55,40" stroke="#4B0082" stroke-width="2" fill="none"/>
+                        <!-- Tail -->
+                        <path d="M50,90 Q40,95 30,85 Q20,75 10,65" stroke="#8A2BE2" stroke-width="3" fill="none"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="cutscene-text" id="cutsceneText">Once upon a time, in a lush green forest, there lived a hungry little lizard. One day, the lizard discovered a magical land filled with delicious leaves of all kinds. Join our hero on an epic journey to eat all the leaves and become the ultimate Leaf Eater!</p>
+            <button class="cutscene-skip" id="skipCutsceneBtn">Skip</button>
+        </div>
+    </div>
+
+    <!-- Gallery Screen -->
+    <div class="gallery-screen hidden" id="galleryScreen">
+        <div class="gallery-header">
+            <h2 class="gallery-title">Collection Gallery</h2>
+            <button class="reset-collection" id="resetCollectionBtn">Reset All</button>
+            <button class="close-gallery" id="closeGalleryBtn">×</button>
+        </div>
+        
+        <div class="gallery-tabs">
+            <button class="gallery-tab active" data-tab="leaves">Leaves</button>
+            <button class="gallery-tab" data-tab="powerups">Power-ups</button>
+            <button class="gallery-tab" data-tab="achievements">Achievements</button>
+        </div>
+        
+        <div class="gallery-content">
+            <div class="gallery-grid" id="galleryGrid">
+                <!-- Gallery items will be populated dynamically -->
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">Collection Progress: 0%</div>
+        </div>
+    </div>
+
+    <!-- Background animations -->
+    <div class="cloud cloud1"></div>
+    <div class="cloud cloud2"></div>
+    <div class="grass" id="grassContainer"></div>
+
+    <!-- Lizard Character - Background Animation -->
+    <div class="lizard-character idle" id="lizardCharacter">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <!-- Lizard body -->
+            <path id="lizardCharacterBody" d="M50,10 C60,10 70,20 70,30 C70,40 65,45 65,50 C65,55 70,60 70,70 C70,80 60,90 50,90 C40,90 30,80 30,70 C30,60 35,55 35,50 C35,45 30,40 30,30 C30,20 40,10 50,10 Z" fill="#8A2BE2" stroke="#4B0082" stroke-width="2"/>
+            
+            <!-- Eyes -->
+            <circle cx="40" cy="30" r="5" fill="white"/>
+            <circle cx="60" cy="30" r="5" fill="white"/>
+            <circle cx="40" cy="30" r="3" fill="black"/>
+            <circle cx="60" cy="30" r="3" fill="black"/>
+            
+            <!-- Mouth -->
+            <path d="M45,40 Q50,45 55,40" stroke="#4B0082" stroke-width="2" fill="none"/>
+            
+            <!-- Front legs -->
+            <path d="M30,25 C20,20 10,25 10,35" stroke="#8A2BE2" stroke-width="3" fill="none"/>
+            <path d="M70,25 C80,20 90,25 90,35" stroke="#8A2BE2" stroke-width="3" fill="none"/>
+            
+            <!-- Back legs -->
+            <path d="M30,65 C20,60 10,65 10,75" stroke="#8A2BE2" stroke-width="3" fill="none"/>
+            <path d="M70,65 C80,60 90,65 90,75" stroke="#8A2BE2" stroke-width="3" fill="none"/>
+            
+            <!-- Leg details -->
+            <circle cx="10" cy="35" r="2" fill="#8A2BE2"/>
+            <circle cx="90" cy="35" r="2" fill="#8A2BE2"/>
+            <circle cx="10" cy="75" r="2" fill="#8A2BE2"/>
+            <circle cx="90" cy="75" r="2" fill="#8A2BE2"/>
+            
+            <!-- Tail -->
+            <path id="lizardCharacterTail" d="M50,90 Q40,95 30,85 Q20,75 10,65" stroke="#8A2BE2" stroke-width="3" fill="none"/>
+            
+            <!-- Pattern (initially hidden) -->
+            <g id="lizardCharacterPattern" style="display: none;">
+                <!-- Pattern will be added dynamically -->
+            </g>
+            
+            <!-- Accessory (initially hidden) -->
+            <g id="lizardCharacterAccessory" style="display: none;">
+                <!-- Accessory will be added dynamically -->
+            </g>
+        </svg>
+    </div>
+
+    <!-- Header with controls -->
+    <header>
+        <div class="counter">
+            <span class="leaf-icon">🍃</span>
+            <span>Leaves: <span id="leafCount">0</span></span>
+        </div>
+        <div class="score">
+            Score: <span id="scoreValue">0</span>
+        </div>
+        <div class="combo" id="combo">
+            <span>🔥</span>
+            <span>Combo x<span id="comboValue">0</span></span>
+        </div>
+        <div class="audio-controls">
+            <button class="audio-btn" id="muteBtn">🔊</button>
+            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="30">
+        </div>
+    </header>
+
+    <!-- In-game buttons -->
+    <div class="in-game-buttons hidden" id="inGameButtons">
+        <button class="in-game-btn gallery-game-btn" id="inGameGalleryBtn">Gallery</button>
+        <button class="in-game-btn restart-btn" id="restartBtn">Restart</button>
+    </div>
+
+    <!-- Mobile hint for touch control -->
+    <div class="mobile-hint" id="mobileHint">
+        Tap on leaves and power-ups to move toward them
+    </div>
+
+    <!-- Game container for random hex positioning -->
+    <main class="game-container" id="gameContainer"></main>
+
+    <!-- Modal for game completion -->
+    <div class="modal" id="gameCompleteModal">
+        <div class="modal-content">
+            <h2>🦎 Congratulations! 🦎</h2>
+            <p>You've eaten all the leaves!</p>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <button class="play-again-btn" id="playAgainBtn">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Mini-game modal -->
+    <div class="mini-game" id="miniGame">
+        <div class="mini-game-content">
+            <h2 class="mini-game-title">Quick Reflex Challenge!</h2>
+            <p>Tap the targets as quickly as possible!</p>
+            <div class="mini-timer">Time: <span id="miniTimer">10</span>s</div>
+            <div class="mini-score">Score: <span id="miniScore">0</span></div>
+            <div class="mini-game-area" id="miniGameArea"></div>
+            <button class="skip-btn" id="skipMiniGame">Skip</button>
+        </div>
+    </div>
+
+    <!-- Achievement notification -->
+    <div class="achievement" id="achievement">
+        <div class="achievement-icon">🏆</div>
+        <div class="achievement-text">
+            <h3 id="achievementTitle">Achievement Unlocked!</h3>
+            <p id="achievementDesc">You've completed a challenge!</p>
+        </div>
+    </div>
+
+    <!-- Sound indicator -->
+    <div class="sound-indicator" id="soundIndicator">🔊 Eating sound played</div>
+
+    <!-- Background music -->
+    <audio id="backgroundMusic" loop>
+        <source src="https://www.bensound.com/bensound-music/bensound-ukulele.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <script>
+        // Game variables
+        let totalLeaves = 0;
+        let eatenLeaves = 0;
+        let score = 0;
+        let isMuted = false;
+        let gameStarted = false;
+        let isTouchDevice = false;
+        let audioContext = null;
+        let headerHeight = 0;
+        let screenWidth = 0;
+        let screenHeight = 0;
+        
+        // Character customization variables
+        let lizardColor = "#8A2BE2";
+        let lizardPattern = "none";
+        let lizardAccessory = "none";
+        let hasCustomized = false; // Track if player has already customized
+        
+        // New feature variables
+        let comboCount = 0;
+        let comboTimer = null;
+        let comboMultiplier = 1;
+        let powerUps = [];
+        let obstacles = [];
+        let activePowerUp = null;
+        let powerUpTimer = null;
+        let pointMultiplier = 1;
+        let magnetActive = false;
+        let miniGameScore = 0;
+        let miniGameTimer = null;
+        let miniGameActive = false;
+        let currentLevel = 1;
+        let achievements = [];
+        let ambientSounds = {
+            birds: null,
+            insects: null,
+            wind: null
+        };
+        let bossLeaves = [];
+        let blocked = false;
+        let blockTimer = null;
+        
+        // Lizard animation variables
+        let lizardAnimation = null;
+        let lizardDirectionX = 1; // 1 for right, -1 for left
+        let lizardDirectionY = 1; // 1 for down, -1 for up
+        let lizardX = 0;
+        let lizardY = 0;
+        let lizardSpeed = 1; // Speed for background animation
+        let lizardChangeDirectionTimer = 0;
+        let lizardState = 'idle'; // idle, walking, eating
+        let lizardAnimationId = null;
+        let lastFrameTime = 0;
+        let frameInterval = 1000 / 60; // 60 FPS
+
+        // Collection variables
+        let collectedLeaves = {};
+        let collectedPowerUps = {};
+        let totalCollectionItems = 0;
+        let collectedItems = 0;
+        
+        // Cutscene variables
+        let currentCutscene = 0;
+        const cutscenes = [
+            {
+                title: "Chapter 1: The Beginning",
+                text: "Once upon a time, in a lush green forest, there lived a hungry little lizard. One day, the lizard discovered a magical land filled with delicious leaves of all kinds. Join our hero on an epic journey to eat all the leaves and become the ultimate Leaf Eater!"
+            },
+            {
+                title: "Chapter 2: The Challenge",
+                text: "As our lizard hero ventures deeper into the forest, the challenges become greater. Strange obstacles appear, and rare leaves offer tempting rewards. Will our hero overcome these challenges and continue the journey?"
+            },
+            {
+                title: "Chapter 3: The Power Within",
+                text: "Our lizard discovers mystical power-ups that grant special abilities. With speed boosts, point multipliers, and magnetic powers, nothing can stand in the way of becoming the ultimate Leaf Eater!"
+            },
+            {
+                title: "Chapter 4: The Final Feast",
+                text: "At last, our lizard reaches the heart of the forest, where the legendary boss leaves await. With all the skills acquired, our hero is ready for the final feast and to claim the title of the ultimate Leaf Eater!"
+            }
+        ];
+
+        // Asset loading system
+        const assets = {
+            images: [],
+            sounds: {
+                crunch1: null,
+                crunch2: null,
+                crunch3: null,
+                crunch4: null,
+                crunch5: null,
+                achievement: null,
+                powerup: null,
+                bossHit: null,
+                bossDefeat: null
+            },
+            loadedCount: 0,
+            totalCount: 8,
+            loadingComplete: false
+        };
+
+        // Particle pool for memory management
+        const particlePool = {
+            particles: [],
+            maxParticles: 50,
+            init: function() {
+                for (let i = 0; i < this.maxParticles; i++) {
+                    const particle = document.createElement('div');
+                    particle.className = 'particle';
+                    particle.style.display = 'none';
+                    document.body.appendChild(particle);
+                    this.particles.push(particle);
+                }
+            },
+            get: function() {
+                for (let i = 0; i < this.particles.length; i++) {
+                    if (this.particles[i].style.display === 'none') {
+                        return this.particles[i];
+                    }
+                }
+                // If all particles are in use, create a new one (fallback)
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                document.body.appendChild(particle);
+                this.particles.push(particle);
+                return particle;
+            },
+            release: function(particle) {
+                particle.style.display = 'none';
+                particle.textContent = '';
+                particle.style.left = '';
+                particle.style.top = '';
+                particle.style.setProperty('--x', '');
+                particle.style.setProperty('--y', '');
+            }
+        };
+
+        // Detect touch device and screen size
+        function detectDeviceAndScreen() {
+            isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+            screenWidth = window.innerWidth;
+            screenHeight = window.innerHeight;
+            
+            // Show mobile hint on touch devices only
+            const mobileHint = document.getElementById('mobileHint');
+            if (isTouchDevice && mobileHint.classList.contains('hidden')) {
+                mobileHint.classList.remove('hidden');
+            }
+        }
+
+        const gameContainer = document.getElementById('gameContainer');
+        const leafCountElement = document.getElementById('leafCount');
+        const scoreElement = document.getElementById('scoreValue');
+        const gameCompleteModal = document.getElementById('gameCompleteModal');
+        const playAgainBtn = document.getElementById('playAgainBtn');
+        const lizardCharacter = document.getElementById('lizardCharacter');
+        const muteBtn = document.getElementById('muteBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const loadingProgressBar = document.getElementById('loadingProgressBar');
+        const loadingPercentage = document.getElementById('loadingPercentage');
+        const startScreen = document.getElementById('startScreen');
+        const newGameBtn = document.getElementById('newGameBtn');
+        const galleryBtn = document.getElementById('galleryBtn');
+        const customizationScreen = document.getElementById('customizationScreen');
+        const startGameBtn = document.getElementById('startGameBtn');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const cutsceneScreen = document.getElementById('cutsceneScreen');
+        const skipCutsceneBtn = document.getElementById('skipCutsceneBtn');
+        const galleryScreen = document.getElementById('galleryScreen');
+        const closeGalleryBtn = document.getElementById('closeGalleryBtn');
+        const grassContainer = document.getElementById('grassContainer');
+        const soundIndicator = document.getElementById('soundIndicator');
+        const backgroundMusic = document.getElementById('backgroundMusic');
+        const comboElement = document.getElementById('combo');
+        const comboValueElement = document.getElementById('comboValue');
+        const achievementElement = document.getElementById('achievement');
+        const achievementTitleElement = document.getElementById('achievementTitle');
+        const achievementDescElement = document.getElementById('achievementDesc');
+        const miniGame = document.getElementById('miniGame');
+        const miniGameArea = document.getElementById('miniGameArea');
+        const miniTimerElement = document.getElementById('miniTimer');
+        const miniScoreElement = document.getElementById('miniScore');
+        const skipMiniGameBtn = document.getElementById('skipMiniGame');
+        const inGameButtons = document.getElementById('inGameButtons');
+        const inGameGalleryBtn = document.getElementById('inGameGalleryBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const mobileHint = document.getElementById('mobileHint');
+
+        // Green shades for hexagons
+        const greenShades = [
+            '#2d8659', '#3a9b6b', '#47b07d', '#54c58f', 
+            '#61daa1', '#6eefb3', '#7bffc5', '#2e7d4e',
+            '#358456', '#3c8b5e', '#439266', '#4a996e',
+            '#51a076', '#58a77e', '#5fae86', '#66b58e',
+            '#6dbc96', '#74c39e', '#7bcaa6', '#82d1ae'
+        ];
+
+        // Different leaf types with shapes and colors
+        const leafTypes = [
+            { class: 'normal', emoji: '🍃', points: 10, sound: 'crunch1', name: 'Normal Leaf' },
+            { class: 'golden', emoji: '✨', points: 50, sound: 'crunch2', name: 'Golden Leaf' },
+            { class: 'rare', emoji: '🌿', points: 25, sound: 'crunch3', name: 'Rare Leaf' },
+            { class: 'autumn', emoji: '🍂', points: 15, sound: 'crunch4', name: 'Autumn Leaf' },
+            { class: 'tropical', emoji: '🌴', points: 20, sound: 'crunch5', name: 'Tropical Leaf' },
+            { class: 'forest', emoji: '🌱', points: 12, sound: 'crunch1', name: 'Forest Leaf' },
+            { class: 'normal', emoji: '🍀', points: 10, sound: 'crunch2', name: 'Clover Leaf' },
+            { class: 'rare', emoji: '🌾', points: 25, sound: 'crunch3', name: 'Wheat Leaf' },
+            { class: 'boss', emoji: '🌳', points: 100, health: 3, name: 'Boss Leaf' }
+        ];
+
+        // Power-up types
+        const powerUpTypes = [
+            { class: 'speed', emoji: '⚡', duration: 3000, effect: 'speed', name: 'Speed Boost' },
+            { class: 'points', emoji: '💰', duration: 8000, effect: 'points', name: 'Point Multiplier' },
+            { class: 'magnet', emoji: '🧲', duration: 6000, effect: 'magnet', name: 'Leaf Magnet' }
+        ];
+
+        // Achievement definitions
+        const achievementDefinitions = [
+            { id: 'first_leaf', title: 'First Bite', desc: 'Eat your first leaf', check: () => eatenLeaves >= 1, icon: '🍃', type: 'normal' },
+            { id: 'combo_5', title: 'Combo Master', desc: 'Reach a 5x combo', check: () => comboCount >= 5, icon: '🔥', type: 'normal' },
+            { id: 'score_500', title: 'High Scorer', desc: 'Score 500 points in one game', check: () => score >= 500, icon: '⭐', type: 'normal' },
+            { id: 'boss_slayer', title: 'Boss Slayer', desc: 'Defeat a boss leaf', check: () => achievements.includes('boss_defeated'), icon: '🗡️', type: 'normal' },
+        ];
+
+        // Audio fallback system
+        const audioFallback = {
+            supported: false,
+            context: null,
+            sounds: {},
+            
+            init: function() {
+                // Check for Web Audio API support
+                if (window.AudioContext || window.webkitAudioContext) {
+                    try {
+                        this.context = new (window.AudioContext || window.webkitAudioContext)();
+                        this.supported = true;
+                        console.log("Web Audio API supported");
+                    } catch(e) {
+                        console.log("Web Audio API not available:", e);
+                        this.supported = false;
+                    }
+                } else {
+                    console.log("Web Audio API not supported in this browser");
+                    this.supported = false;
+                }
+                
+                // Create fallback sounds using Audio elements
+                if (!this.supported) {
+                    this.createFallbackSounds();
+                }
+                
+                return this.supported;
+            },
+            
+            createFallbackSounds: function() {
+                // Create simple beep sounds using data URLs
+                this.sounds.crunch = this.createBeep(300, 0.1);
+                this.sounds.powerup = this.createBeep(800, 0.2);
+                this.sounds.achievement = this.createBeep(1000, 0.3);
+                this.sounds.boss = this.createBeep(150, 0.2);
+            },
+            
+            createBeep: function(frequency, duration) {
+                // Create a simple beep using Web Audio API if available
+                // Otherwise return null for silent fallback
+                if (this.supported && this.context) {
+                    return {
+                        play: function() {
+                            try {
+                                const oscillator = audioContext.createOscillator();
+                                const gainNode = audioContext.createGain();
+                                
+                                oscillator.connect(gainNode);
+                                gainNode.connect(audioContext.destination);
+                                
+                                oscillator.frequency.value = frequency;
+                                oscillator.type = 'sine';
+                                
+                                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+                                
+                                oscillator.start(audioContext.currentTime);
+                                oscillator.stop(audioContext.currentTime + duration);
+                            } catch(e) {
+                                console.log("Fallback sound error:", e);
+                            }
+                        }
+                    };
+                }
+                
+                // Silent fallback
+                return {
+                    play: function() {
+                        console.log("Audio fallback - silent mode");
+                    }
+                };
+            },
+            
+            playSound: function(type, options = {}) {
+                try {
+                    if (!this.supported && !options.force) {
+                        return; // Silent mode
+                    }
+                    
+                    switch(type) {
+                        case 'crunch':
+                            this.sounds.crunch.play();
+                            break;
+                        case 'powerup':
+                            this.sounds.powerup.play();
+                            break;
+                        case 'achievement':
+                            this.sounds.achievement.play();
+                            break;
+                        case 'boss':
+                            this.sounds.boss.play();
+                            break;
+                        default:
+                            console.log("Unknown sound type:", type);
+                    }
+                } catch(e) {
+                    console.log("Audio fallback error:", e);
+                }
+            }
+        };
+
+        // Save system using localStorage
+        function saveGameData() {
+            try {
+                const saveData = {
+                    score: score,
+                    currentLevel: currentLevel,
+                    achievements: achievements,
+                    collectedLeaves: collectedLeaves,
+                    collectedPowerUps: collectedPowerUps,
+                    lizardColor: lizardColor,
+                    lizardPattern: lizardPattern,
+                    lizardAccessory: lizardAccessory,
+                    hasCustomized: hasCustomized,
+                    totalLeaves: totalLeaves,
+                    eatenLeaves: eatenLeaves,
+                    comboCount: comboCount,
+                    comboMultiplier: comboMultiplier,
+                    pointMultiplier: pointMultiplier,
+                    lizardSpeed: lizardSpeed,
+                    timestamp: Date.now()
+                };
+                
+                localStorage.setItem('lizardLeafEaterSave', JSON.stringify(saveData));
+                console.log("Game saved successfully");
+            } catch (error) {
+                console.log("Error saving game:", error);
+            }
+        }
+
+        // Load game data from localStorage
+        function loadGameData() {
+            try {
+                const saveData = localStorage.getItem('lizardLeafEaterSave');
+                if (!saveData) {
+                    console.log("No save data found");
+                    return false;
+                }
+                
+                const data = JSON.parse(saveData);
+                
+                // Validate loaded data
+                if (!data || typeof data !== 'object') {
+                    console.log("Invalid save data format");
+                    return false;
+                }
+                
+                // Load game state with validation
+                score = typeof data.score === 'number' ? data.score : 0;
+                currentLevel = typeof data.currentLevel === 'number' ? data.currentLevel : 1;
+                achievements = Array.isArray(data.achievements) ? data.achievements : [];
+                collectedLeaves = typeof data.collectedLeaves === 'object' ? data.collectedLeaves : {};
+                collectedPowerUps = typeof data.collectedPowerUps === 'object' ? data.collectedPowerUps : {};
+                lizardColor = typeof data.lizardColor === 'string' ? data.lizardColor : "#8A2BE2";
+                lizardPattern = typeof data.lizardPattern === 'string' ? data.lizardPattern : "none";
+                lizardAccessory = typeof data.lizardAccessory === 'string' ? data.lizardAccessory : "none";
+                hasCustomized = typeof data.hasCustomized === 'boolean' ? data.hasCustomized : false;
+                totalLeaves = typeof data.totalLeaves === 'number' ? data.totalLeaves : 0;
+                eatenLeaves = typeof data.eatenLeaves === 'number' ? data.eatenLeaves : 0;
+                comboCount = typeof data.comboCount === 'number' ? data.comboCount : 0;
+                comboMultiplier = typeof data.comboMultiplier === 'number' ? data.comboMultiplier : 1;
+                pointMultiplier = typeof data.pointMultiplier === 'number' ? data.pointMultiplier : 1;
+                lizardSpeed = typeof data.lizardSpeed === 'number' ? data.lizardSpeed : 1;
+                
+                console.log("Game loaded successfully");
+                return true;
+            } catch (error) {
+                console.log("Error loading game:", error);
+                return false;
+            }
+        }
+
+        // Delete save data
+        function deleteSaveData() {
+            try {
+                localStorage.removeItem('lizardLeafEaterSave');
+                console.log("Save data deleted");
+            } catch (error) {
+                console.log("Error deleting save data:", error);
+            }
+        }
+
+        // Auto-save game state
+        function autoSave() {
+            saveGameData();
+        }
+
+        // Load game assets
+        function loadAssets() {
+            return new Promise((resolve) => {
+                let loadedAssets = 0;
+                const totalAssets = 2; // Background music and images
+                
+                // Load background music
+                if (backgroundMusic) {
+                    backgroundMusic.addEventListener('canplaythrough', () => {
+                        loadedAssets++;
+                        updateLoadingProgress(loadedAssets / totalAssets * 100);
+                        if (loadedAssets === totalAssets) {
+                            resolve();
+                        }
+                    }, { once: true });
+                    
+                    backgroundMusic.addEventListener('error', () => {
+                        loadedAssets++;
+                        updateLoadingProgress(loadedAssets / totalAssets * 100);
+                        console.log("Background music failed to load");
+                        if (loadedAssets === totalAssets) {
+                            resolve();
+                        }
+                    }, { once: true });
+                    
+                    // Start loading
+                    backgroundMusic.load();
+                } else {
+                    loadedAssets++;
+                    updateLoadingProgress(loadedAssets / totalAssets * 100);
+                }
+                
+                // Preload lizard character images (if any)
+                const lizardImages = document.querySelectorAll('.lizard-character img');
+                let imagesLoaded = 0;
+                
+                if (lizardImages.length > 0) {
+                    lizardImages.forEach(img => {
+                        if (img.complete) {
+                            imagesLoaded++;
+                        } else {
+                            img.addEventListener('load', () => {
+                                imagesLoaded++;
+                                if (imagesLoaded === lizardImages.length) {
+                                    loadedAssets++;
+                                    updateLoadingProgress(loadedAssets / totalAssets * 100);
+                                    if (loadedAssets === totalAssets) {
+                                        resolve();
+                                    }
+                                }
+                            }, { once: true });
+                            
+                            img.addEventListener('error', () => {
+                                imagesLoaded++;
+                                if (imagesLoaded === lizardImages.length) {
+                                    loadedAssets++;
+                                    updateLoadingProgress(loadedAssets / totalAssets * 100);
+                                    console.log("Image failed to load");
+                                    if (loadedAssets === totalAssets) {
+                                        resolve();
+                                    }
+                                }
+                            }, { once: true });
+                        }
+                    });
+                } else {
+                    loadedAssets++;
+                    updateLoadingProgress(loadedAssets / totalAssets * 100);
+                }
+                
+                // If no assets to load, resolve immediately
+                if (loadedAssets === totalAssets) {
+                    resolve();
+                }
+                
+                // Fallback timeout
+                setTimeout(() => {
+                    resolve();
+                }, 3000);
+            });
+        }
+
+        // Update loading progress
+        function updateLoadingProgress(progress) {
+            if (loadingProgressBar) {
+                loadingProgressBar.style.width = `${progress}%`;
+            }
+            if (loadingPercentage) {
+                loadingPercentage.textContent = `${Math.round(progress)}%`;
+            }
+        }
+
+        // Initialize audio context
+        function initAudioContext() {
+            if (!audioContext) {
+                // Initialize audio fallback system
+                audioFallback.init();
+                
+                if (audioFallback.supported) {
+                    audioContext = audioFallback.context;
+                }
+            }
+            return audioContext;
+        }
+
+        // Calculate responsive cell count based on screen size
+        function calculateCellCount() {
+            let minCells, maxCells;
+            
+            if (screenWidth < 768) { // Mobile
+                minCells = 15;
+                maxCells = 25;
+            } else if (screenWidth < 1200) { // Tablet
+                minCells = 20;
+                maxCells = 35;
+            } else { // Desktop
+                minCells = 25;
+                maxCells = 45;
+            }
+            
+            const levelBonus = Math.min(currentLevel * 2, 10);
+            let cellCount = minCells + levelBonus + Math.floor(Math.random() * 8);
+            return Math.min(cellCount, maxCells);
+        }
+
+        // Initialize the game
+        function initGame() {
+            console.log("Initializing game...");
+            
+            // Clear the container
+            gameContainer.innerHTML = '';
+            
+            // Reset counters
+            totalLeaves = 0;
+            eatenLeaves = 0;
+            score = 0;
+            comboCount = 0;
+            comboMultiplier = 1;
+            powerUps = [];
+            obstacles = [];
+            bossLeaves = [];
+            
+            // Clear any active timers
+            if (comboTimer) clearTimeout(comboTimer);
+            if (powerUpTimer) clearTimeout(powerUpTimer);
+            if (blockTimer) clearTimeout(blockTimer);
+            
+            // Reset power-ups state
+            activePowerUp = null;
+            pointMultiplier = 1;
+            magnetActive = false;
+            blocked = false;
+            
+            // Show mobile hint
+            mobileHint.classList.remove('hidden');
+            
+            // Ensure game active class is maintained
+            document.body.classList.add('game-active');
+            document.body.classList.add('playing');
+            
+            // Show in-game buttons - make them persistent
+            inGameButtons.classList.remove('hidden');
+            
+            // Get header height for positioning
+            headerHeight = document.querySelector('header').offsetHeight;
+            
+            console.log("Creating hex grid...");
+            
+            // Calculate responsive cell count
+            const cellCount = calculateCellCount();
+            
+            // Create hexagonal grid with random positions
+            createRandomHexGrid(cellCount);
+            
+            // Create obstacles (only rocks now)
+            createObstacles(Math.min(currentLevel, 3));
+            
+            // Create power-ups
+            createPowerUps(Math.min(Math.floor(currentLevel / 2) + 1, 3));
+            
+            // Create boss leaves for higher levels
+            if (currentLevel >= 2) {
+                createBossLeaves(2);
+            }
+            
+            // Update displays
+            updateLeafCount();
+            updateScore();
+            updateCombo();
+            
+            // Start lizard background animation
+            startLizardAnimation();
+            
+            // Restart background music if needed
+            if (!isMuted && backgroundMusic.paused) {
+                try {
+                    backgroundMusic.play().catch(e => console.log("Background music play error:", e));
+                } catch (e) {
+                    console.log("Error playing audio:", e);
+                }
+            }
+            
+            // Start day/night cycle
+            startDayNightCycle();
+        }
+
+        // Start lizard background animation
+        function startLizardAnimation() {
+            // Initialize lizard position
+            lizardX = screenWidth / 2;
+            lizardY = screenHeight / 2;
+            lizardCharacter.style.left = `${lizardX}px`;
+            lizardCharacter.style.top = `${lizardY}px`;
+            lizardDirectionX = Math.random() > 0.5 ? 1 : -1;
+            lizardDirectionY = Math.random() > 0.5 ? 1 : -1;
+            lizardChangeDirectionTimer = 0;
+            lizardState = 'idle';
+            
+            // Clear any existing animation
+            if (lizardAnimationId) {
+                cancelAnimationFrame(lizardAnimationId);
+            }
+            
+            // Set initial state
+            setLizardState('idle');
+            
+            // Start the animation loop
+            lastFrameTime = performance.now();
+            animateLizard(lastFrameTime);
+        }
+
+        // Set lizard animation state
+        function setLizardState(state) {
+            lizardState = state;
+            lizardCharacter.className = `lizard-character ${state}`;
+        }
+
+        // Animate lizard movement with optimized performance
+        function animateLizard(currentTime) {
+            // Calculate delta time for frame-independent animation
+            const deltaTime = currentTime - lastFrameTime;
+            
+            // Only update if enough time has passed (throttling)
+            if (deltaTime >= frameInterval) {
+                // Update direction change timer
+                lizardChangeDirectionTimer++;
+                
+                // Randomly change direction every 60-180 frames (1-3 seconds at 60fps)
+                if (lizardChangeDirectionTimer > 60 + Math.random() * 120) {
+                    lizardDirectionX = Math.random() > 0.5 ? 1 : -1;
+                    lizardDirectionY = Math.random() > 0.5 ? 1 : -1;
+                    lizardChangeDirectionTimer = 0;
+                    
+                    // Flip the lizard horizontally based on X direction
+                    lizardCharacter.style.transform = lizardDirectionX === 1 ? 'scaleX(1)' : 'scaleX(-1)';
+                    
+                    // Change state occasionally
+                    if (Math.random() < 0.3) {
+                        setLizardState('walking');
+                        setTimeout(() => setLizardState('idle'), 1000);
+                    }
+                }
+                
+                // Calculate new position
+                lizardX += lizardSpeed * lizardDirectionX;
+                lizardY += lizardSpeed * lizardDirectionY;
+                
+                // Check boundaries and reverse direction if needed
+                const lizardWidth = lizardCharacter.offsetWidth;
+                const lizardHeight = lizardCharacter.offsetHeight;
+                
+                if (lizardX > screenWidth - lizardWidth || lizardX < 0) {
+                    lizardDirectionX *= -1;
+                    lizardCharacter.style.transform = lizardDirectionX === 1 ? 'scaleX(1)' : 'scaleX(-1)';
+                }
+                
+                if (lizardY > screenHeight - lizardHeight - 100 || lizardY < headerHeight + 50) {
+                    lizardDirectionY *= -1;
+                }
+                
+                // Check for collisions with obstacles
+                checkLizardCollisions();
+                
+                // Update position
+                lizardCharacter.style.left = `${lizardX}px`;
+                lizardCharacter.style.top = `${lizardY}px`;
+                
+                // Update last frame time
+                lastFrameTime = currentTime;
+            }
+            
+            // Continue animation
+            lizardAnimationId = requestAnimationFrame(animateLizard);
+        }
+
+        // Check for collisions between lizard and obstacles
+        function checkLizardCollisions() {
+            const lizardRect = lizardCharacter.getBoundingClientRect();
+            
+            // Check collision with obstacles
+            for (const obstacle of obstacles) {
+                const obstacleRect = obstacle.getBoundingClientRect();
+                
+                if (isColliding(lizardRect, obstacleRect)) {
+                    // Change direction when hitting an obstacle
+                    lizardDirectionX *= -1;
+                    lizardDirectionY *= -1;
+                    lizardCharacter.style.transform = lizardDirectionX === 1 ? 'scaleX(1)' : 'scaleX(-1)';
+                    
+                    // Change to walking state briefly
+                    setLizardState('walking');
+                    setTimeout(() => setLizardState('idle'), 500);
+                    
+                    // Play collision sound
+                    playCollisionSound();
+                    
+                    // Create collision particles
+                    createCollisionParticles(lizardRect.left + lizardRect.width/2, lizardRect.top + lizardRect.height/2);
+                    
+                    return; // Only handle one collision per frame
+                }
+            }
+            
+            // Check if lizard is near a leaf or power-up
+            checkNearbyItems(lizardRect);
+        }
+
+        // Check if two rectangles are colliding
+        function isColliding(rect1, rect2) {
+            return !(rect1.right < rect2.left || 
+                    rect1.left > rect2.right || 
+                    rect1.bottom < rect2.top || 
+                    rect1.top > rect2.bottom);
+        }
+
+        // Check if lizard is near any game items
+        function checkNearbyItems(lizardRect) {
+            // Check for nearby leaves
+            const hexElements = document.querySelectorAll('.hex:not(.eaten)');
+            for (const hex of hexElements) {
+                const hexRect = hex.getBoundingClientRect();
+                const distance = getDistance(lizardRect, hexRect);
+                
+                // If lizard is close to a leaf, look at it
+                if (distance < 100) {
+                    // Make the lizard look at the leaf
+                    const angle = Math.atan2(
+                        hexRect.top + hexRect.height/2 - (lizardRect.top + lizardRect.height/2),
+                        hexRect.left + hexRect.width/2 - (lizardRect.left + lizardRect.width/2)
+                    );
+                    
+                    // Calculate rotation based on angle
+                    const rotation = angle * (180 / Math.PI);
+                    
+                    // Apply rotation to the lizard
+                    const currentTransform = lizardCharacter.style.transform;
+                    const scaleX = lizardDirectionX === 1 ? 1 : -1;
+                    lizardCharacter.style.transform = `scaleX(${scaleX}) rotate(${rotation}deg)`;
+                    
+                    // Reset transform after a short delay
+                    setTimeout(() => {
+                        lizardCharacter.style.transform = currentTransform;
+                    }, 1000);
+                    
+                    return; // Only look at one item per frame
+                }
+            }
+        }
+
+        // Calculate distance between two rectangles
+        function getDistance(rect1, rect2) {
+            const x1 = rect1.left + rect1.width / 2;
+            const y1 = rect1.top + rect1.height / 2;
+            const x2 = rect2.left + rect2.width / 2;
+            const y2 = rect2.top + rect2.height / 2;
+            
+            return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        }
+
+        // Create collision particles
+        function createCollisionParticles(x, y) {
+            const particleCount = 5;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = particlePool.get();
+                particle.textContent = '💨';
+                particle.style.left = `${x}px`;
+                particle.style.top = `${y}px`;
+                particle.style.display = 'block';
+                
+                // Calculate random offset for animation
+                const offsetX = (Math.random() - 0.5) * 50;
+                const offsetY = (Math.random() - 0.5) * 50;
+                particle.style.setProperty('--x', `${offsetX}px`);
+                particle.style.setProperty('--y', `${offsetY}px`);
+                
+                setTimeout(() => {
+                    particlePool.release(particle);
+                }, 1000);
+            }
+        }
+
+        // Play collision sound
+        function playCollisionSound() {
+            if (isMuted || !audioContext) return;
+            
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.type = 'triangle';
+                oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(150, audioContext.currentTime + 0.1);
+                
+                gainNode.gain.setValueAtTime(volumeSlider.value / 100 * 0.5, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.1);
+            } catch(e) {
+                console.log("Collision sound error:", e);
+            }
+        }
+
+        // Create hexagonal grid with random positions
+        function createRandomHexGrid(cellCount) {
+            const hexWidth = 100;
+            const hexHeight = 110;
+            
+            // Calculate safe area boundaries
+            const margin = Math.max(hexWidth, hexHeight) + 20;
+            const safeLeft = margin;
+            const safeRight = screenWidth - margin;
+            const safeTop = headerHeight + margin;
+            const safeBottom = screenHeight - margin;
+            
+            for (let i = 0; i < cellCount; i++) {
+                let x, y;
+                
+                do {
+                    x = Math.random() * (safeRight - safeLeft) + safeLeft;
+                    y = Math.random() * (safeBottom - safeTop) + safeTop;
+                } while (!isPositionSafe(x, y));
+                
+                const hex = createHex(x, y);
+                gameContainer.appendChild(hex);
+                totalLeaves++;
+            }
+        }
+
+        // Check if position is safe - prevents overlap with existing elements
+        function isPositionSafe(x, y, minDistance = 120) {
+            try {
+                // Get all existing game elements
+                const existingElements = gameContainer.querySelectorAll('.hex, .power-up, .obstacle');
+                
+                for (const element of existingElements) {
+                    const elementX = parseFloat(element.style.left) || 0;
+                    const elementY = parseFloat(element.style.top) || 0;
+                    
+                    // Calculate distance between centers
+                    const distance = Math.sqrt(Math.pow(x - elementX, 2) + Math.pow(y - elementY, 2));
+                    
+                    // If too close to existing element, position is not safe
+                    if (distance < minDistance) {
+                        return false;
+                    }
+                }
+                
+                // Check boundaries
+                const margin = 100;
+                if (x < margin || x > screenWidth - margin || 
+                    y < headerHeight + margin || y > screenHeight - margin) {
+                    return false;
+                }
+                
+                return true;
+            } catch (error) {
+                console.log("Error in isPositionSafe:", error);
+                // Fallback to basic boundary check
+                return x > 50 && x < screenWidth - 50 && 
+                       y > headerHeight + 50 && y < screenHeight - 50;
+            }
+        }
+
+        // Create obstacles (only rocks)
+        function createObstacles(count) {
+            console.log("Creating", count, "obstacles");
+            
+            for (let i = 0; i < count; i++) {
+                let x, y;
+                
+                do {
+                    x = Math.random() * (screenWidth - 120) + 60;
+                    y = Math.random() * (screenHeight - 220) + 120;
+                } while (!isPositionSafe(x, y));
+                
+                const obstacle = createObstacle(x, y, 'rock');
+                gameContainer.appendChild(obstacle);
+                obstacles.push(obstacle);
+            }
+        }
+
+        // Create a single obstacle
+        function createObstacle(x, y, type) {
+            const obstacle = document.createElement('div');
+            obstacle.className = `obstacle ${type}`;
+            obstacle.style.left = `${x}px`;
+            obstacle.style.top = `${y}px`;
+            
+            return obstacle;
+        }
+
+        // Create power-ups
+        function createPowerUps(count) {
+            for (let i = 0; i < count; i++) {
+                let x, y;
+                
+                do {
+                    x = Math.random() * (screenWidth - 120) + 60;
+                    y = Math.random() * (screenHeight - 220) + 120;
+                } while (!isPositionSafe(x, y));
+                
+                const type = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+                const powerUp = createPowerUp(x, y, type);
+                gameContainer.appendChild(powerUp);
+                powerUps.push(powerUp);
+            }
+        }
+
+        // Create a single power-up
+        function createPowerUp(x, y, type) {
+            const powerUp = document.createElement('div');
+            powerUp.className = `power-up ${type.class}`;
+            powerUp.style.left = `${x}px`;
+            powerUp.style.top = `${y}px`;
+            powerUp.textContent = type.emoji;
+            powerUp.dataset.effect = type.effect;
+            powerUp.dataset.duration = type.duration;
+            powerUp.dataset.name = type.name;
+            
+            // Add event listeners for both mouse and touch
+            powerUp.addEventListener('click', function() {
+                collectPowerUp(powerUp);
+            });
+            
+            powerUp.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                collectPowerUp(powerUp);
+            });
+            
+            return powerUp;
+        }
+
+        // Eat leaf function - Instant eating
+        function eatLeaf(hexElement) {
+            try {
+                if (!hexElement || hexElement.classList.contains('eaten')) return;
+                
+                console.log("Eating leaf");
+                
+                // Mark hex as eaten
+                hexElement.classList.add('eaten');
+                
+                // Track collection
+                const leafElement = hexElement.querySelector('.leaf');
+                if (!leafElement) {
+                    console.log("No leaf element found");
+                    return;
+                }
+                
+                const leafClass = leafElement.className.split(' ')[1] || 'normal';
+                
+                if (!collectedLeaves[leafClass]) {
+                    collectedLeaves[leafClass] = 0;
+                }
+                collectedLeaves[leafClass]++;
+                
+                // Hide mobile hint after first leaf is eaten
+                if (eatenLeaves === 0 && mobileHint) {
+                    mobileHint.classList.add('hidden');
+                }
+                
+                // Make lizard eat animation
+                setLizardState('eating');
+                setTimeout(() => setLizardState('idle'), 300);
+                
+                createParticles(hexElement, leafElement.dataset.points || '10');
+                
+                playEatingSound(leafElement.dataset.sound || 'crunch1');
+                
+                // Calculate points with combo and power-up multipliers
+                const points = parseInt(leafElement.dataset.points || 10) * comboMultiplier * pointMultiplier;
+                score += points;
+                updateScore();
+                
+                eatenLeaves++;
+                updateLeafCount();
+                
+                updateCombo();
+                
+                checkAchievements();
+                
+                // Auto-save after eating leaf
+                autoSave();
+                
+                // Check if all leaves are eaten (more robust check)
+                const remainingLeaves = document.querySelectorAll('.hex:not(.eaten)').length;
+                const remainingBossLeaves = document.querySelectorAll('.hex:not(.eaten) .leaf[data-health]').length;
+                
+                if (eatenLeaves >= totalLeaves && remainingLeaves === 0 && remainingBossLeaves === 0) {
+                    console.log("Level complete! eatenLeaves:", eatenLeaves, "totalLeaves:", totalLeaves);
+                    showGameCompleteModal();
+                } else if (eatenLeaves >= totalLeaves) {
+                    console.log("Leaf count reached but some leaves may remain:", {
+                        eatenLeaves,
+                        totalLeaves,
+                        remainingLeaves,
+                        remainingBossLeaves
+                    });
+                }
+            } catch (error) {
+                console.log("Error in eatLeaf:", error);
+            }
+        }
+
+        // Create particle effects for eating
+        function createParticles(hex, points) {
+            const rect = hex.getBoundingClientRect();
+            const particleCount = 10;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = particlePool.get();
+                particle.textContent = '✨';
+                particle.style.left = `${rect.left + rect.width/2}px`;
+                particle.style.top = `${rect.top + rect.height/2}px`;
+                particle.style.display = 'block';
+                
+                // Calculate random offset for animation
+                const offsetX = (Math.random() - 0.5) * 100;
+                const offsetY = (Math.random() - 0.5) * 100;
+                particle.style.setProperty('--x', `${offsetX}px`);
+                particle.style.setProperty('--y', `${offsetY}px`);
+                
+                setTimeout(() => {
+                    particlePool.release(particle);
+                }, 1000);
+            }
+        }
+
+        // Update leaf counter
+        function updateLeafCount() {
+            try {
+                if (leafCountElement) {
+                    leafCountElement.textContent = Math.max(0, totalLeaves - eatenLeaves);
+                }
+            } catch (error) {
+                console.log("Error in updateLeafCount:", error);
+            }
+        }
+
+        // Update score display
+        function updateScore() {
+            try {
+                if (scoreElement) {
+                    scoreElement.textContent = score;
+                }
+            } catch (error) {
+                console.log("Error in updateScore:", error);
+            }
+        }
+
+        // Show game complete modal
+        function showGameCompleteModal() {
+            const finalScoreElement = document.getElementById('finalScore');
+            if (finalScoreElement) {
+                finalScoreElement.textContent = score.toString();
+            }
+            
+            gameCompleteModal.style.display = 'flex';
+            
+            // Check for level completion achievement
+            if (currentLevel >= 5 && !achievements.includes('level_5')) {
+                achievements.push('level_5');
+                checkAchievements();
+            }
+        }
+
+        // Hide game complete modal
+        function hideGameCompleteModal() {
+            gameCompleteModal.style.display = 'none';
+        }
+
+        // Update combo display and logic
+        function updateCombo() {
+            if (comboTimer) clearTimeout(comboTimer);
+            
+            comboCount++;
+            comboMultiplier = Math.floor(comboCount / 5) + 1;
+            
+            comboValueElement.textContent = comboMultiplier;
+            comboElement.classList.add('active');
+            
+            comboTimer = setTimeout(() => {
+                resetCombo();
+            }, 3000); // Reset after 3 seconds
+        }
+
+        function resetCombo() {
+            comboCount = 0;
+            comboMultiplier = 1;
+            comboElement.classList.remove('active');
+        }
+
+        // Check achievements
+        function checkAchievements() {
+            achievementDefinitions.forEach(achievement => {
+                if (!achievements.includes(achievement.id) && achievement.check()) {
+                    unlockAchievement(achievement);
+                }
+            });
+            
+            updateCollectionProgress();
+        }
+
+        // Unlock achievement
+        function unlockAchievement(achievement) {
+            achievements.push(achievement.id);
+            
+            achievementTitleElement.textContent = achievement.title;
+            achievementDescElement.textContent = achievement.desc;
+            
+            achievementElement.className = 'achievement show';
+            if (achievement.type === 'rare') {
+                achievementElement.classList.add('achievement-rare');
+            } else if (achievement.type === 'hidden') {
+                achievementElement.classList.add('achievement-hidden');
+            }
+            
+            document.querySelector('.achievement-icon').textContent = achievement.icon;
+            playAchievementSound();
+            
+            setTimeout(() => {
+                achievementElement.classList.remove('show');
+            }, 3000);
+        }
+
+        // Play eating sound with variety
+        function playEatingSound(soundType = 'crunch1') {
+            if (isMuted || !audioContext) return;
+            
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                let frequency, duration, type;
+                
+                switch(soundType) {
+                    case 'crunch1':
+                        frequency = 300;
+                        duration = 0.15;
+                        type = 'square';
+                        break;
+                    case 'crunch2':
+                        frequency = 250;
+                        duration = 0.2;
+                        type = 'sawtooth';
+                        break;
+                    case 'crunch3':
+                        frequency = 350;
+                        duration = 0.1;
+                        type = 'triangle';
+                        break;
+                    case 'crunch4':
+                        frequency = 200;
+                        duration = 0.25;
+                        type = 'square';
+                        break;
+                    case 'crunch5':
+                        frequency = 400;
+                        duration = 0.12;
+                        type = 'sine';
+                        break;
+                    default:
+                        frequency = 300;
+                        duration = 0.15;
+                        type = 'square';
+                }
+                
+                oscillator.type = type;
+                oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.5, audioContext.currentTime + duration);
+                
+                const volumeMultiplier = isTouchDevice ? 1.5 : 1.2;
+                gainNode.gain.setValueAtTime(volumeSlider.value / 100 * volumeMultiplier, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + duration);
+                
+                soundIndicator.style.display = 'block';
+                setTimeout(() => {
+                    soundIndicator.style.display = 'none';
+                }, 500);
+            } catch(e) {
+                console.log("Audio error:", e);
+            }
+        }
+
+        // Play achievement sound
+        function playAchievementSound(){
+            if (isMuted || !audioContext) return;
+            
+            try {
+                for (let i = 0; i < 5; i++) {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(523.25 * Math.pow(2, i/12), audioContext.currentTime + i * 0.1);
+                    
+                    gainNode.gain.setValueAtTime(volumeSlider.value / 100, audioContext.currentTime + i * 0.1);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i * 0.1 + 0.5);
+                    
+                    oscillator.start(audioContext.currentTime + i * 0.1);
+                    oscillator.stop(audioContext.currentTime + i * 0.1 + 0.5);
+                }
+            } catch(e) {
+                console.log("Achievement sound error:", e);
+            }
+        }
+
+        // Create boss leaves
+        function createBossLeaves(count) {
+            for (let i = 0; i < count; i++) {
+                let x, y;
+                
+                do {
+                    x = Math.random() * (screenWidth - 180) + 90;
+                    y = Math.random() * (screenHeight - 280) + 140;
+                } while (!isPositionSafe(x, y));
+                
+                const bossLeaf = createBossLeaf(x, y);
+                gameContainer.appendChild(bossLeaf);
+                bossLeaves.push(bossLeaf);
+                totalLeaves++;
+            }
+        }
+
+        // Create a single boss leaf
+        function createBossLeaf(x, y) {
+            const hex = document.createElement('div');
+            hex.className = 'hex boss-leaf';
+            hex.style.left = `${x}px`;
+            hex.style.top = `${y}px`;
+            hex.style.width = '120px';
+            hex.style.height = '132px';
+            
+            // Create hex inner
+            const hexInner = document.createElement('div');
+            hexInner.className = 'hex-inner';
+            hexInner.style.backgroundColor = '#8B0000';
+            
+            // Create boss leaf
+            const leaf = document.createElement('div');
+            leaf.className = 'leaf boss';
+            leaf.textContent = '🌳';
+            leaf.dataset.points = 100;
+            leaf.dataset.health = 3;
+            leaf.dataset.maxHealth = 3;
+            leaf.dataset.name = 'Boss Leaf';
+            
+            // Add event listeners for both mouse and touch
+            hex.addEventListener('click', function() {
+                if (!hex.classList.contains('eaten')) {
+                    hitBossLeaf(hex);
+                }
+            });
+            
+            hex.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                if (!hex.classList.contains('eaten')) {
+                    hex.classList.add('touch-active');
+                    hitBossLeaf(hex);
+                }
+            });
+            
+            hex.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                hex.classList.remove('touch-active');
+            });
+            
+            // Assemble hex
+            hex.appendChild(hexInner);
+            hex.appendChild(leaf);
+            
+            return hex;
+        }
+
+        // Create grass blades
+        function createGrass() {
+            if (!grassContainer) return; // Safety check
+            
+            for (let i = 0; i < 50; i++) {
+                const blade = document.createElement('div');
+                blade.className = 'grass-blade';
+                blade.style.left = Math.random() * 100 + '%';
+                blade.style.height = 20 + Math.random() * 30 + 'px';
+                blade.style.animationDelay = Math.random() * 3 + 's';
+                grassContainer.appendChild(blade);
+            }
+        }
+
+        // Update lizard preview in customization screen
+        function updateLizardPreview() {
+            const lizardBody = document.getElementById('lizardBody');
+            if (lizardBody) {
+                lizardBody.setAttribute('fill', lizardColor);
+            }
+            
+            const lizardPattern = document.getElementById('lizardPattern');
+            if (lizardPattern) {
+                lizardPattern.style.display = 'none';
+                lizardPattern.innerHTML = '';
+                
+                // Add pattern if selected
+                if (lizardPattern && lizardPattern !== 'none') {
+                    lizardPattern.style.display = 'block';
+                    
+                    if (lizardPattern === 'spots') {
+                        // Add spots
+                        for (let i = 0; i < 8; i++) {
+                            const spot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                            const x = 20 + Math.random() * 60;
+                            const y = 20 + Math.random() * 60;
+                            const r = 3 + Math.random() * 5;
+                            
+                            spot.setAttribute('cx', x);
+                            spot.setAttribute('cy', y);
+                            spot.setAttribute('r', r);
+                            spot.setAttribute('fill', 'rgba(0,0,0,0.2)');
+                            
+                            lizardPattern.appendChild(spot);
+                        }
+                    } else if (lizardPattern === 'stripes') {
+                        // Add stripes
+                        for (let i = 0; i < 5; i++) {
+                            const stripe = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                            const y = 15 + i * 15;
+                            
+                            stripe.setAttribute('x', '20');
+                            stripe.setAttribute('y', y);
+                            stripe.setAttribute('width', '60');
+                            stripe.setAttribute('height', '5');
+                            stripe.setAttribute('fill', 'rgba(0,0,0,0.2)');
+                            
+                            lizardPattern.appendChild(stripe);
+                        }
+                    } else if (lizardPattern === 'zigzag') {
+                        // Add zigzag
+                        const zigzag = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        zigzag.setAttribute('d', 'M30,20 L40,30 L50,20 L60,30 L70,20 L70,40 L60,50 L70,60 L60,70 L50,60 L40,70 L30,60 L30,40 L40,30 L30,20');
+                        zigzag.setAttribute('fill', 'none');
+                        zigzag.setAttribute('stroke', 'rgba(0,0,0,0.2)');
+                        zigzag.setAttribute('stroke-width', '3');
+                        
+                        lizardPattern.appendChild(zigzag);
+                    }
+                }
+            }
+            
+            const lizardAccessory = document.getElementById('lizardAccessory');
+            if (lizardAccessory) {
+                lizardAccessory.style.display = 'none';
+                lizardAccessory.innerHTML = '';
+                
+                // Add accessory if selected
+                if (lizardAccessory && lizardAccessory !== 'none') {
+                    lizardAccessory.style.display = 'block';
+                    
+                    if (lizardAccessory === 'hat') {
+                        // Add hat
+                        const hat = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+                        hat.setAttribute('cx', '50');
+                        hat.setAttribute('cy', '15');
+                        hat.setAttribute('rx', '25');
+                        hat.setAttribute('ry', '10');
+                        hat.setAttribute('fill', '#000000');
+                        
+                        lizardAccessory.appendChild(hat);
+                    } else if (lizardAccessory === 'bow') {
+                        // Add bow
+                        const bow = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        bow.setAttribute('x', '35');
+                        bow.setAttribute('y', '25');
+                        bow.setAttribute('font-size', '20');
+                        bow.textContent = '🎀';
+                        
+                        lizardAccessory.appendChild(bow);
+                    } else if (lizardAccessory === 'sunglasses') {
+                        // Add sunglasses
+                        const glasses = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        glasses.setAttribute('x', '25');
+                        glasses.setAttribute('y', '25');
+                        glasses.setAttribute('width', '50');
+                        glasses.setAttribute('height', '10');
+                        glasses.setAttribute('rx', '5');
+                        glasses.setAttribute('fill', '#000000');
+                        
+                        lizardAccessory.appendChild(glasses);
+                    }
+                }
+            }
+            
+            const lizardCharacterBody = document.getElementById('lizardCharacterBody');
+            const lizardCharacterPattern = document.getElementById('lizardCharacterPattern');
+            const lizardCharacterAccessory = document.getElementById('lizardCharacterAccessory');
+            const lizardCharacterTail = document.getElementById('lizardCharacterTail');
+            
+            if (lizardCharacterBody) {
+                lizardCharacterBody.setAttribute('fill', lizardColor);
+            }
+            if (lizardCharacterTail) {
+                lizardCharacterTail.setAttribute('stroke', lizardColor);
+            }
+            
+            // Update pattern
+            if (lizardCharacterPattern) {
+                lizardCharacterPattern.style.display = 'none';
+                lizardCharacterPattern.innerHTML = '';
+                
+                // Add pattern if selected
+                if (lizardPattern && lizardPattern !== 'none') {
+                    lizardCharacterPattern.style.display = 'block';
+                    
+                    if (lizardPattern === 'spots') {
+                        // Add spots
+                        for (let i = 0; i < 8; i++) {
+                            const spot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                            const x = 20 + Math.random() * 60;
+                            const y = 20 + Math.random() * 60;
+                            const r = 3 + Math.random() * 5;
+                            
+                            spot.setAttribute('cx', x);
+                            spot.setAttribute('cy', y);
+                            spot.setAttribute('r', r);
+                            spot.setAttribute('fill', 'rgba(0,0,0,0.2)');
+                            
+                            lizardCharacterPattern.appendChild(spot);
+                        }
+                    } else if (lizardPattern === 'stripes') {
+                        // Add stripes
+                        for (let i = 0; i < 5; i++) {
+                            const stripe = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                            const y = 15 + i * 15;
+                            
+                            stripe.setAttribute('x', '20');
+                            stripe.setAttribute('y', y);
+                            stripe.setAttribute('width', '60');
+                            stripe.setAttribute('height', '5');
+                            stripe.setAttribute('fill', 'rgba(0,0,0,0.2)');
+                            
+                            lizardCharacterPattern.appendChild(stripe);
+                        }
+                    } else if (lizardPattern === 'zigzag') {
+                        // Add zigzag
+                        const zigzag = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        zigzag.setAttribute('d', 'M30,20 L40,30 L50,20 L60,30 L70,20 L70,40 L60,50 L70,60 L60,70 L50,60 L40,70 L30,60 L30,40 L40,30 L30,20');
+                        zigzag.setAttribute('fill', 'none');
+                        zigzag.setAttribute('stroke', 'rgba(0,0,0,0.2)');
+                        zigzag.setAttribute('stroke-width', '3');
+                        
+                        lizardCharacterPattern.appendChild(zigzag);
+                    }
+                }
+            }
+            
+            // Update accessory
+            if (lizardCharacterAccessory) {
+                lizardCharacterAccessory.style.display = 'none';
+                lizardCharacterAccessory.innerHTML = '';
+                
+                // Add accessory if selected
+                if (lizardAccessory && lizardAccessory !== 'none') {
+                    lizardCharacterAccessory.style.display = 'block';
+                    
+                    if (lizardAccessory === 'hat') {
+                        // Add hat
+                        const hat = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+                        hat.setAttribute('cx', '50');
+                        hat.setAttribute('cy', '15');
+                        hat.setAttribute('rx', '25');
+                        hat.setAttribute('ry', '10');
+                        hat.setAttribute('fill', '#000000');
+                        
+                        lizardCharacterAccessory.appendChild(hat);
+                    } else if (lizardAccessory === 'bow') {
+                        // Add bow
+                        const bow = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        bow.setAttribute('x', '35');
+                        bow.setAttribute('y', '25');
+                        bow.setAttribute('font-size', '20');
+                        bow.textContent = '🎀';
+                        
+                        lizardCharacterAccessory.appendChild(bow);
+                    } else if (lizardAccessory === 'sunglasses') {
+                        // Add sunglasses
+                        const glasses = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        glasses.setAttribute('x', '25');
+                        glasses.setAttribute('y', '25');
+                        glasses.setAttribute('width', '50');
+                        glasses.setAttribute('height', '10');
+                        glasses.setAttribute('rx', '5');
+                        glasses.setAttribute('fill', '#000000');
+                        
+                        lizardCharacterAccessory.appendChild(glasses);
+                    }
+                }
+            }
+
+        }
+
+        // Randomize customization options
+        function randomizeCustomization() {
+            const colorOptions = document.querySelectorAll('.color-option');
+            const randomColorIndex = Math.floor(Math.random() * colorOptions.length);
+            colorOptions[randomColorIndex].click();
+            
+            const patternOptions = document.querySelectorAll('.pattern-option');
+            const randomPatternIndex = Math.floor(Math.random() * patternOptions.length);
+            patternOptions[randomPatternIndex].click();
+            
+            const accessoryOptions = document.querySelectorAll('.accessory-option');
+            const randomAccessoryIndex = Math.floor(Math.random() * accessoryOptions.length);
+            accessoryOptions[randomAccessoryIndex].click();
+        }
+
+        // Show cutscene
+        function showCutscene() {
+            if (currentCutscene >= cutscenes.length) {
+                currentCutscene = 0;
+            }
+            
+            const cutscene = cutscenes[currentCutscene];
+            document.getElementById('cutsceneTitle').textContent = cutscene.title;
+            document.getElementById('cutsceneText').textContent = cutscene.text;
+            
+            // Update cutscene lizard with player customization
+            const cutsceneLizardBody = document.getElementById('cutsceneLizardBody');
+            if (cutsceneLizardBody) {
+                cutsceneLizardBody.setAttribute('fill', lizardColor);
+            }
+            
+            cutsceneScreen.classList.remove('hidden');
+            
+            currentCutscene++;
+        }
+
+        // Hide cutscene
+        function hideCutscene() {
+            cutsceneScreen.classList.add('hidden');
+        }
+
+        // Show gallery
+        function showGallery() {
+            document.body.classList.remove('game-active', 'playing'); // Show cursor
+            galleryScreen.classList.remove('hidden');
+            updateGallery();
+        }
+
+        // Hide gallery
+        function hideGallery() {
+            if (document.getElementById('galleryScreen').classList.contains('hidden')) return;
+            galleryScreen.classList.add('hidden');
+            if (gameStarted) {
+                document.body.classList.add('game-active', 'playing'); // Restore cursor during game
+            }
+        }
+
+        // Reset all collection data
+        function resetCollection() {
+            if (confirm('Are you sure you want to reset all collected leaves, power-ups, and achievements? This action cannot be undone!')) {
+                // Reset all collection data
+                collectedLeaves = {};
+                collectedPowerUps = {};
+                achievements = [];
+                
+                // Reset game variables
+                score = 0;
+                currentLevel = 1;
+                hasCustomized = false;
+                
+                // Clear saved data
+                localStorage.removeItem('lizardGameData');
+                
+                // Update displays
+                updateScore();
+                updateLeafCount();
+                updateGallery();
+                
+                // Show confirmation message
+                alert('All collection data has been reset! You can now start fresh.');
+            }
+        }
+
+        // Update gallery content
+        function updateGallery() {
+            const activeTab = document.querySelector('.gallery-tab.active').dataset.tab;
+            const galleryGrid = document.getElementById('galleryGrid');
+            
+            if (!galleryGrid) return; // Safety check
+            
+            galleryGrid.innerHTML = '';
+            
+            if (activeTab === 'leaves') {
+                leafTypes.forEach(leafType => {
+                    const item = document.createElement('div');
+                    item.className = 'gallery-item';
+                    
+                    const count = collectedLeaves[leafType.class] || 0;
+                    if (count > 0) {
+                        item.innerHTML = `
+                            <div class="gallery-item-icon">${leafType.emoji}</div>
+                            <div class="gallery-item-name">${leafType.name}</div>
+                            <div class="gallery-item-count">${count}</div>
+                        `;
+                    } else {
+                        item.classList.add('locked');
+                        item.innerHTML = `
+                            <div class="gallery-item-icon">❓</div>
+                            <div class="gallery-item-name">???</div>
+                        `;
+                    }
+                    
+                    galleryGrid.appendChild(item);
+                });
+            } else if (activeTab === 'powerups') {
+                powerUpTypes.forEach(powerUpType => {
+                    const item = document.createElement('div');
+                    item.className = 'gallery-item';
+                    
+                    const count = collectedPowerUps[powerUpType.class] || 0;
+                    if (count > 0) {
+                        item.innerHTML = `
+                            <div class="gallery-item-icon">${powerUpType.emoji}</div>
+                            <div class="gallery-item-name">${powerUpType.name}</div>
+                            <div class="gallery-item-count">${count}</div>
+                        `;
+                    } else {
+                        item.classList.add('locked');
+                        item.innerHTML = `
+                            <div class="gallery-item-icon">❓</div>
+                            <div class="gallery-item-name">???</div>
+                        `;
+                    }
+                    
+                    galleryGrid.appendChild(item);
+                });
+            } else if (activeTab === 'achievements') {
+                achievementDefinitions.forEach(achievement => {
+                    const item = document.createElement('div');
+                    item.className = 'gallery-item';
+                    
+                    if (achievements.includes(achievement.id)) {
+                        item.innerHTML = `
+                            <div class="gallery-item-icon">${achievement.icon}</div>
+                            <div class="gallery-item-name">${achievement.title}</div>
+                        `;
+                    } else {
+                        item.classList.add('locked');
+                        item.innerHTML = `
+                            <div class="gallery-item-icon">🔒</div>
+                            <div class="gallery-item-name">${achievement.title}</div>
+                        `;
+                    }
+                    
+                    galleryGrid.appendChild(item);
+                });
+            }
+            
+            updateCollectionProgress();
+        }
+
+        // Update collection progress
+        function updateCollectionProgress() {
+            const activeTab = document.querySelector('.gallery-tab.active').dataset.tab;
+            let total = 0;
+            let collected = 0;
+            
+            if (activeTab === 'leaves') {
+                // Calculate total leaves collected across all types
+                let totalLeavesCollected = 0;
+                for (const leafType in collectedLeaves) {
+                    totalLeavesCollected += collectedLeaves[leafType];
+                }
+                
+                // Scale: 1000 leaves = 100%
+                total = 1000;
+                collected = Math.min(totalLeavesCollected, 1000);
+            } else if (activeTab === 'powerups') {
+                total = powerUpTypes.length;
+                collected = Object.keys(collectedPowerUps).length;
+            } else if (activeTab === 'achievements') {
+                total = achievementDefinitions.length;
+                collected = achievements.length;
+            }
+            
+            const progressPercent = Math.round((collected / total) * 100);
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            
+            if (progressFill) {
+                progressFill.style.width = `${progressPercent}%`;
+            }
+            if (progressText) {
+                progressText.textContent = `Collection Progress: ${progressPercent}%`;
+            }
+        }
+
+        // Collect power-up
+        function collectPowerUp(powerUpElement) {
+            try {
+                if (!powerUpElement) return;
+                
+                // Remove from DOM
+                if (powerUpElement.parentNode) {
+                    powerUpElement.remove();
+                }
+                
+                // Remove from array
+                const index = powerUps.indexOf(powerUpElement);
+                if (index > -1) {
+                    powerUps.splice(index, 1);
+                }
+                
+                // Track collection
+                const effectType = powerUpElement.dataset?.effect || 'unknown';
+                if (!collectedPowerUps[effectType]) {
+                    collectedPowerUps[effectType] = 0;
+                }
+                collectedPowerUps[effectType]++;
+                
+                // Apply power-up effect
+                activatePowerUp(powerUpElement);
+                
+                // Track achievement
+                achievements.push(`power_${effectType}`);
+                checkAchievements();
+                
+                // Auto-save after collecting power-up
+                autoSave();
+                
+                // Create particle effects
+                createPowerUpParticles(powerUpElement);
+                
+                playPowerUpSound();
+            } catch (error) {
+                console.log("Error in collectPowerUp:", error);
+            }
+        }
+
+        // Activate power-up effect
+        function activatePowerUp(element) {
+            const type = element.dataset;
+            
+            if (type.effect === 'speed') {
+                // Speed boost now affects lizard animation speed
+                lizardSpeed = 2;
+                
+                // Clear existing timer
+                if (powerUpTimer) clearTimeout(powerUpTimer);
+                
+                powerUpTimer = setTimeout(() => {
+                    lizardSpeed = 1; // Reset to default
+                }, parseInt(type.duration));
+            } else if (type.effect === 'points') {
+                pointMultiplier = 2;
+                
+                // Clear existing timer
+                if (powerUpTimer) clearTimeout(powerUpTimer);
+                
+                powerUpTimer = setTimeout(() => {
+                    pointMultiplier = 1;
+                }, parseInt(type.duration));
+            } else if (type.effect === 'magnet') {
+                magnetActive = true;
+                
+                // Clear existing timer
+                if (powerUpTimer) clearTimeout(powerUpTimer);
+                
+                powerUpTimer = setTimeout(() => {
+                    magnetActive = false;
+                }, parseInt(type.duration));
+            }
+            
+            activePowerUp = type.effect;
+        }
+
+        // Create particles for power-up collection
+        function createPowerUpParticles(powerUpElement) {
+            const rect = powerUpElement.getBoundingClientRect();
+            const particleCount = 15;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = particlePool.get();
+                particle.textContent = '⭐';
+                particle.style.left = `${rect.left + rect.width/2}px`;
+                particle.style.top = `${rect.top + rect.height/2}px`;
+                particle.style.display = 'block';
+                
+                // Calculate random offset for animation
+                const offsetX = (Math.random() - 0.5) * 150;
+                const offsetY = (Math.random() - 0.5) * 150;
+                particle.style.setProperty('--x', `${offsetX}px`);
+                particle.style.setProperty('--y', `${offsetY}px`);
+                
+                setTimeout(() => {
+                    particlePool.release(particle);
+                }, 1000);
+            }
+        }
+
+        // Play power-up sound
+        function playPowerUpSound() {
+            if (isMuted || !audioContext) return;
+            
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(1046.5, audioContext.currentTime + 0.1);
+                
+                gainNode.gain.setValueAtTime(volumeSlider.value / 100, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3);
+            } catch(e) {
+                console.log("Power-up sound error:", e);
+            }
+        }
+
+        // Hit boss leaf
+        function hitBossLeaf(hexElement) {
+            if (hexElement.classList.contains('eaten')) return;
+            
+            const leaf = hexElement.querySelector('.leaf');
+            let health = parseInt(leaf.dataset.health);
+            health--;
+            leaf.dataset.health = health;
+            
+            console.log("Hit boss leaf, health:", health);
+            
+            playBossHitSound();
+            
+            // Create particle effects
+            createBossHitParticles(hexElement);
+            
+            if (health <= 0) {
+                hexElement.classList.add('eaten');
+                
+                // Track collection
+                const leafClass = 'boss';
+                if (!collectedLeaves[leafClass]) {
+                    collectedLeaves[leafClass] = 0;
+                }
+                collectedLeaves[leafClass]++;
+                
+                // Update score
+                score += parseInt(leaf.dataset.points) * comboMultiplier * pointMultiplier;
+                updateScore();
+                
+                // Update counters
+                eatenLeaves++;
+                updateLeafCount();
+                
+                achievements.push('boss_defeated');
+                checkAchievements();
+                
+                // Auto-save after defeating boss
+                autoSave();
+                
+                createBossDefeatParticles(hexElement);
+                playBossDefeatSound();
+                
+                // Remove from array and DOM after delay
+                setTimeout(() => {
+                    const index = bossLeaves.indexOf(hexElement);
+                    if (index > -1) {
+                        bossLeaves.splice(index, 1);
+                    }
+                    hexElement.remove();
+                }, 1000);
+            } else {
+                leaf.style.opacity = 0.5 + (health / parseInt(leaf.dataset.maxHealth)) * 0.5;
+                
+                blockLizard(500);
+            }
+            
+            updateCombo();
+        }
+
+        // Block lizard movement temporarily
+        function blockLizard(duration) {
+            blocked = true;
+            if (blockTimer) clearTimeout(blockTimer);
+            blockTimer = setTimeout(() => blocked = false, duration);
+        }
+
+        // Create single hexagon at position
+        function createHex(x, y) {
+            const hex = document.createElement('div');
+            hex.className = 'hex';
+            hex.style.left = `${x}px`;
+            hex.style.top = `${y}px`;
+            
+            // Random green shade
+            const randomGreen = greenShades[Math.floor(Math.random() * greenShades.length)];
+            
+            // Create hex inner
+            const hexInner = document.createElement('div');
+            hexInner.className = 'hex-inner';
+            hexInner.style.backgroundColor = randomGreen;
+            
+            // Create leaf with random type
+            const leafType = leafTypes[Math.floor(Math.random() * leafTypes.length)];
+            const leaf = document.createElement('div');
+            leaf.className = `leaf ${leafType.class}`;
+            leaf.textContent = leafType.emoji;
+            leaf.dataset.points = leafType.points;
+            leaf.dataset.sound = leafType.sound;
+            leaf.dataset.name = leafType.name;
+            
+            // Add event listeners for both mouse and touch
+            hex.addEventListener('click', function() {
+                if (!hex.classList.contains('eaten')) {
+                    eatLeaf(hex);
+                }
+            });
+            
+            hex.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                if (!hex.classList.contains('eaten')) {
+                    hex.classList.add('touch-active');
+                    eatLeaf(hex);
+                }
+            });
+            
+            hex.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                hex.classList.remove('touch-active');
+            });
+            
+            // Assemble hex
+            hex.appendChild(hexInner);
+            hex.appendChild(leaf);
+            
+            return hex;
+        }
+
+        // Day/Night cycle
+        function startDayNightCycle() {
+            const timeOfDay = ['day', 'evening', 'night'];
+            let currentIndex = 0;
+            
+            if (window.dayNightInterval) clearInterval(window.dayNightInterval);
+            
+            window.dayNightInterval = setInterval(() => {
+                document.body.className = timeOfDay[currentIndex];
+                currentIndex = (currentIndex + 1) % timeOfDay.length;
+            }, 15000); // Change every 15 seconds
+        }
+
+        // Customization option handling
+        function applyOption(el, groupName, typeKey) {
+            const group = el.closest('.customization-section');
+            if (!group) return;
+            const selected = group.querySelector('.selected');
+            if (selected) selected.classList.remove('selected');
+            el.classList.add('selected');
+
+            // Update variables based on group
+            if (typeKey === 'color') {
+                lizardColor = el.dataset.color;
+            } else if (typeKey === 'pattern') {
+                lizardPattern = el.dataset.pattern || 'none';
+            } else if (typeKey === 'accessory') {
+                lizardAccessory = el.dataset.accessory || 'none';
+            }
+
+            // Update preview / character
+            updateLizardPreview();
+            
+            // Auto-save customization changes
+            autoSave();
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            detectDeviceAndScreen();
+        });
+
+        // Prevent zoom on double tap for mobile devices
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(e) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
+
+        // Handle page visibility change for audio
+        document.addEventListener('visibilitychange', function() {
+            try {
+                if (!document.hidden && gameStarted && !isMuted && backgroundMusic) {
+                    if (backgroundMusic.paused) {
+                        backgroundMusic.play().catch(e => console.log("Audio resume failed:", e));
+                    }
+                    
+                    document.body.classList.add('game-active', 'playing');
+                }
+            } catch(e) {
+                console.log("Error handling visibility change:", e);
+            }
+        });
+
+        // Create boss hit particles
+        function createBossHitParticles(hexElement) {
+            const rect = hexElement.getBoundingClientRect();
+            const particleCount = 8;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = particlePool.get();
+                particle.textContent = '💥';
+                particle.style.left = `${rect.left + rect.width/2}px`;
+                particle.style.top = `${rect.top + rect.height/2}px`;
+                particle.style.display = 'block';
+                
+                // Calculate random offset for animation
+                const offsetX = (Math.random() - 0.5) * 120;
+                const offsetY = (Math.random() - 0.5) * 120;
+                particle.style.setProperty('--x', `${offsetX}px`);
+                particle.style.setProperty('--y', `${offsetY}px`);
+                
+                setTimeout(() => {
+                    particlePool.release(particle);
+                }, 1000);
+            }
+        }
+
+        // Create boss defeat particles
+        function createBossDefeatParticles(hexElement) {
+            const rect = hexElement.getBoundingClientRect();
+            const particleCount = 20;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = particlePool.get();
+                particle.textContent = ['⭐', '✨', '💫', '🌟'][Math.floor(Math.random() * 4)];
+                particle.style.left = `${rect.left + rect.width/2}px`;
+                particle.style.top = `${rect.top + rect.height/2}px`;
+                particle.style.display = 'block';
+                
+                // Calculate random offset for animation
+                const offsetX = (Math.random() - 0.5) * 200;
+                const offsetY = (Math.random() - 0.5) * 200;
+                particle.style.setProperty('--x', `${offsetX}px`);
+                particle.style.setProperty('--y', `${offsetY}px`);
+                
+                setTimeout(() => {
+                    particlePool.release(particle);
+                }, 1500);
+            }
+        }
+
+        function playBossHitSound() {
+            if (isMuted || !audioContext) return;
+            
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.2);
+                
+                gainNode.gain.setValueAtTime(volumeSlider.value / 100 * 1.5, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.2);
+            } catch(e) {
+                console.log("Boss hit sound error:", e);
+            }
+        }
+
+        function playBossDefeatSound() {
+            if (isMuted || !audioContext) return;
+            
+            try {
+                for (let i = 0; i < 8; i++) {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(523.25 * Math.pow(2, i/6), audioContext.currentTime + i * 0.05);
+                    
+                    gainNode.gain.setValueAtTime(volumeSlider.value / 100, audioContext.currentTime + i * 0.05);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i * 0.05 + 0.5);
+                    
+                    oscillator.start(audioContext.currentTime + i * 0.05);
+                    oscillator.stop(audioContext.currentTime + i * 0.05 + 0.5);
+                }
+            } catch(e) {
+                console.log("Boss defeat sound error:", e);
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Gallery button
+            galleryBtn.addEventListener('click', function() {
+                showGallery();
+            });
+            
+            // Start button
+            newGameBtn.addEventListener('click', function() {
+                startScreen.classList.add('hidden');
+                
+                if (!hasCustomized) {
+                    customizationScreen.classList.remove('hidden');
+                } else {
+                    updateLizardPreview();
+                    showCutscene();
+                }
+            });
+            
+            // Customization buttons
+            randomizeBtn.addEventListener('click', randomizeCustomization);
+            
+            startGameBtn.addEventListener('click', function() {
+                customizationScreen.classList.add('hidden');
+                hasCustomized = true;
+                updateLizardPreview();
+                showCutscene();
+                // Add a new line of code here
+                console.log('Game started!');
+            });
+            
+            // Mute button
+            muteBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                muteBtn.textContent = isMuted ? '🔇' : '🔊';
+                
+                if (!isMuted && backgroundMusic.paused) {
+                    try {
+                        backgroundMusic.play().catch(e => console.log("Background music play failed:", e));
+                    } catch(e) {
+                        console.log("Error playing audio:", e);
+                    }
+                } else if (isMuted && !backgroundMusic.paused) {
+                    backgroundMusic.pause();
+                }
+            });
+            
+            // Volume control
+            volumeSlider.addEventListener('input', function(e) {
+                if (backgroundMusic) {
+                    backgroundMusic.volume = e.target.value / 100;
+                }
+            });
+            
+            // Cutscene skip button
+            skipCutsceneBtn.addEventListener('click', function() {
+                hideCutscene();
+                gameStarted = true;
+                document.body.classList.add('game-active', 'playing');
+                
+                initAudioContext();
+                initGame();
+                
+                if (backgroundMusic) {
+                    backgroundMusic.volume = volumeSlider.value / 100;
+                    try {
+                        backgroundMusic.play().catch(e => console.log("Background music play failed:", e));
+                    } catch(e) {
+                        console.log("Error playing audio:", e);
+                    }
+                }
+            });
+            
+            // Play again button
+            playAgainBtn.addEventListener('click', function() {
+                hideGameCompleteModal();
+                currentLevel++;
+                showCutscene();
+            });
+            
+            // Gallery buttons
+            resetCollectionBtn.addEventListener('click', resetCollection);
+            closeGalleryBtn.addEventListener('click', hideGallery);
+            inGameGalleryBtn.addEventListener('click', showGallery);
+            
+            // Restart button
+            restartBtn.addEventListener('click', function() {
+                gameStarted = false;
+                document.body.classList.remove('game-active', 'playing');
+                inGameButtons.classList.add('hidden');
+                
+                hideGameCompleteModal();
+                miniGame.style.display = 'none';
+                
+                currentLevel = 1;
+                startScreen.classList.remove('hidden');
+            });
+            
+            // Gallery tabs
+            document.querySelectorAll('.gallery-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.gallery-tab').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    updateGallery();
+                });
+            });
+            
+            // Customization options
+            document.querySelectorAll('.color-option').forEach(el =>
+                el.addEventListener('click', () => applyOption(el, 'color', 'color')));
+            document.querySelectorAll('.pattern-option').forEach(el =>
+                el.addEventListener('click', () => applyOption(el, 'pattern', 'pattern')));
+            document.querySelectorAll('.accessory-option').forEach(el =>
+                el.addEventListener('click', () => applyOption(el, 'accessory', 'accessory')));
+        }
+
+        // Initialize on load with proper event handling
+        window.addEventListener('load', function() {
+            try {
+                detectDeviceAndScreen();
+                createGrass();
+                particlePool.init();
+                
+                // Try to load saved game data
+                loadGameData();
+                
+                // Load assets before showing the start screen
+                loadAssets().then(() => {
+                    setTimeout(() => {
+                        loadingScreen.classList.add('hidden');
+                        startScreen.classList.remove('hidden');
+                        
+                        // Ensure all event listeners are properly attached
+                        setupEventListeners();
+                        
+                    }, 500);
+                });
+            } catch(e) {
+                console.log("Initialization error:", e);
+                // Fallback if initialization fails
+                loadingScreen.classList.add('hidden');
+                startScreen.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
