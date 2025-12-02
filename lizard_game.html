@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; media-src 'self' data: blob:; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self'; font-src 'self';">
     <title>Lizard Leaf Eater - Enhanced Edition</title>
     <style>
         * {
@@ -1615,6 +1616,15 @@
     </audio>
 
     <script>
+        // Handle browser extension errors
+        window.addEventListener('error', function(e) {
+            if (e.message && e.message.includes('chrome is not defined')) {
+                console.warn('Ignoring browser extension error:', e.message);
+                e.preventDefault();
+                return false;
+            }
+        });
+        
         // Game variables
         let totalLeaves = 0;
         let eatenLeaves = 0;
